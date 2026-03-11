@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>점잇기 - Dot to Dot</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap');
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        font-family: 'Noto Sans KR', sans-serif;
+        margin: 0; padding: 0;
+        background: #F5F1EB;
+        min-height: 100dvh;
+        display: flex; justify-content: center; align-items: flex-start;
+        user-select: none;
+    }
+    .app {
+        width: 100%; max-width: 480px;
+        min-height: 100dvh;
+        background: white;
+        padding: 24px 20px;
+        padding-top: max(24px, env(safe-area-inset-top));
+        padding-bottom: max(24px, env(safe-area-inset-bottom));
+        display: flex; flex-direction: column;
+    }
+    /* Tablet */
+    @media (min-width: 768px) {
+        body { align-items: center; padding: 32px; }
+        .app {
+            max-width: 640px; min-height: auto;
+            border-radius: 32px;
+            box-shadow: 0 8px 48px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+            padding: 44px 40px;
+        }
+    }
+    /* Large tablet / landscape */
+    @media (min-width: 1024px) {
+        .app { max-width: 720px; padding: 52px 56px; }
+    }
+    .hidden { display: none !important; }
+
+    /* ── Login ── */
+    .login-view {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; flex: 1; min-height: 100dvh; padding: 40px 20px;
+    }
+    .login-logo-area { text-align: center; margin-bottom: 48px; }
+    .login-logo-area h1 {
+        font-size: 1.875rem; font-weight: 900;
+        letter-spacing: -0.025em; margin-top: 8px;
+    }
+    .login-subtitle { color: #B8AD9E; font-size: .9375rem; margin-top: 4px; }
+    .login-buttons { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
+    .login-btn {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        width: 100%; padding: 14px 20px; border-radius: 12px;
+        font-size: .9375rem; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+        border: none; cursor: pointer; transition: transform .1s;
+    }
+    .login-btn:active { transform: scale(.97); }
+    .login-btn svg { flex-shrink: 0; }
+    .login-btn.kakao    { background: #FEE500; color: #191919; }
+    .login-btn.naver    { background: #03C75A; color: #FFF; }
+    .login-btn.google   { background: #FFF; color: #444; border: 1.5px solid #DADCE0; }
+    .login-btn.facebook { background: #1877F2; color: #FFF; }
+
+    @media (min-width: 768px) {
+        .login-logo-area h1 { font-size: 2.25rem; }
+        .login-subtitle { font-size: 1.05rem; }
+        .login-buttons { max-width: 380px; gap: 14px; }
+        .login-btn { padding: 16px 24px; font-size: 1rem; border-radius: 14px; }
+    }
+
+    /* ── Header ── */
+    .app-header {
+        display: flex; flex-direction: column; align-items: center;
+        text-align: center; margin-bottom: 28px; position: relative; width: 100%;
+    }
+    .app-header h1 {
+        font-size: 1.5rem; font-weight: 900;
+        letter-spacing: -0.025em; margin: 8px 0 0; line-height: 1.2;
+    }
+    @media (min-width: 768px) {
+        .app-header h1 { font-size: 1.75rem; }
+    }
+
+    /* ── Section label ── */
+    .sec-label { font-size: .875rem; font-weight: 700; color: #B8AD9E; margin: 0 0 10px; width: 100%; }
+
+    /* ── Grid select ── */
+    .grid-select {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 10px; margin-bottom: 18px; width: 100%;
+    }
+    .grid-card {
+        border: 2.5px solid #E8E2DA; border-radius: 20px;
+        padding: 14px 6px 10px; background: white;
+        cursor: pointer; text-align: center; transition: all .15s;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    }
+    .grid-card:active { transform: scale(.95); }
+    .grid-card.selected { border-color: #F0A050; background: #FFF8F0; }
+    .grid-card canvas { width: 48px; height: 48px; }
+    .grid-card .g-name { font-size: .82rem; font-weight: 700; color: #4A4035; }
+    @media (min-width: 768px) {
+        .grid-select { gap: 14px; }
+        .grid-card { padding: 18px 8px 14px; border-radius: 22px; }
+        .grid-card canvas { width: 64px; height: 64px; }
+        .grid-card .g-name { font-size: .9rem; }
+    }
+
+    /* ── Segment buttons (dots select) ── */
+    .row-btns { display: flex; gap: 8px; margin-bottom: 14px; width: 100%; }
+    .seg-btn {
+        flex: 1; padding: 11px 0;
+        border: 2.5px solid #E8E2DA; border-radius: 12px;
+        background: white; font-family: 'Noto Sans KR', sans-serif;
+        font-size: .875rem; font-weight: 700; color: #8C8070;
+        cursor: pointer; transition: all .15s;
+    }
+    .seg-btn:active { transform: scale(.97); }
+    .seg-btn.sel-green { border-color: #5BC886; background: #EDFAF2; color: #1A7A3A; }
+    @media (min-width: 768px) {
+        .row-btns { gap: 12px; }
+        .seg-btn { padding: 14px 0; font-size: .95rem; border-radius: 14px; }
+    }
+
+    /* ── Start button ── */
+    .start-btn {
+        width: 100%; padding: 16px 0; border-radius: 16px; border: none;
+        margin-top: 18px; background: #4A4035; color: white;
+        font-family: 'Noto Sans KR', sans-serif;
+        font-size: 1.1rem; font-weight: 700; cursor: pointer;
+        box-shadow: 0 2px 8px rgba(74,64,53,0.15);
+        transition: transform .1s, box-shadow .1s;
+    }
+    .start-btn:active { transform: scale(.97); box-shadow: none; }
+
+    /* ── Logout ── */
+    .logout-btn {
+        background: none; border: 1.5px solid #E8E2DA; border-radius: 8px;
+        padding: 6px 14px; font-size: 0.75rem; font-weight: 600;
+        color: #B8AD9E; cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+        transition: background 0.15s;
+    }
+    .logout-btn:hover { background: #F5F1EB; }
+
+    /* ── Share button (home) ── */
+    .btn-share-home {
+        position: absolute; top: 8px; right: 0;
+        background: white; border: 2px solid #E8E2DA; border-radius: 10px;
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: #8C8070; z-index: 10;
+    }
+    .btn-share-home:active { background: #F5F1EB; }
+
+    /* ── Game nav ── */
+    .game-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; width: 100%; }
+    .btn-back {
+        width: 36px; height: 36px; border-radius: 10px;
+        border: 2px solid #E8E2DA; background: white;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 1.1rem; color: #8C8070; flex-shrink: 0;
+    }
+    .btn-back:active { background: #F5F1EB; }
+    .nav-title { flex: 1; font-size: 1rem; font-weight: 700; color: #4A4035; }
+    .badge { font-size: .75rem; font-weight: 600; color: #8C8070; background: #F5F1EB; border-radius: 8px; padding: 4px 10px; }
+
+    /* ── Game boards ── */
+    .game-boards { width: 100%; display: flex; gap: 14px; justify-content: center; margin-bottom: 14px; }
+    .board-wrapper { flex: 1; max-width: 260px; text-align: center; }
+    .board-label { font-size: .78rem; font-weight: 700; color: #B8AD9E; margin-bottom: 8px; }
+    .board-container {
+        width: 100%; aspect-ratio: 1;
+        border: 2.5px solid #E8E2DA; border-radius: 20px;
+        position: relative; background: #FAFAF8; overflow: hidden;
+    }
+    .board-container canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    @media (min-width: 768px) {
+        .game-boards { gap: 24px; }
+        .board-wrapper { max-width: 300px; }
+        .board-label { font-size: .85rem; }
+    }
+    .game-hint { font-size: .875rem; font-weight: 600; color: #B8AD9E; text-align: center; min-height: 22px; }
+
+    /* ── Undo button ── */
+    .btn-undo {
+        margin-top: 8px; padding: 10px 28px;
+        border: 2px solid #E8E2DA; border-radius: 12px;
+        background: white; font-family: 'Noto Sans KR', sans-serif;
+        font-size: .85rem; font-weight: 700; color: #8C8070;
+        cursor: pointer; transition: all .15s;
+    }
+    .btn-undo:active { transform: scale(.97); background: #F5F1EB; }
+
+    /* ── Result overlay ── */
+    .result-overlay {
+        display: none; position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,.35); z-index: 100;
+        justify-content: center; align-items: center;
+    }
+    .result-overlay.active { display: flex; }
+    .result-card {
+        background: #fff; border-radius: 24px;
+        padding: 36px 28px 28px; text-align: center;
+        max-width: 380px; width: 90%;
+        animation: popIn .35s ease-out;
+    }
+    @keyframes popIn { 0%{transform:scale(.7);opacity:0} 60%{transform:scale(1.12);opacity:1} 100%{transform:scale(1);opacity:1} }
+    .result-emoji { font-size: 3rem; margin-bottom: 12px; }
+    .result-text { font-size: 1.2rem; font-weight: 900; margin-bottom: 6px; }
+    .result-sub { font-size: .85rem; font-weight: 600; color: #8C8070; margin-bottom: 20px; }
+    .result-actions { display: flex; gap: 10px; }
+    .result-actions button {
+        flex: 1; height: 48px; border-radius: 12px;
+        font-family: inherit; font-size: .9rem; font-weight: 700;
+        cursor: pointer; transition: transform .1s;
+    }
+    .result-actions button:active { transform: scale(.97); }
+    .btn-retry { background: #fff; border: 2.5px solid #E8E2DA; color: #4A4035; }
+    .btn-next { background: linear-gradient(135deg, #F0A050, #F07070); border: none; color: #fff; }
+    .btn-share-result {
+        width: 100%; height: 48px; margin-top: 10px;
+        border-radius: 12px; border: 2px solid #5BC886;
+        background: #EAFFF2; color: #2D8B4E;
+        font-family: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+    }
+
+    /* ── Share overlay ── */
+    .share-overlay {
+        display: none; position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,.35); z-index: 200;
+        justify-content: center; align-items: flex-end;
+    }
+    .share-overlay.active { display: flex; }
+    .share-sheet {
+        background: #fff; border-radius: 20px 20px 0 0;
+        padding: 24px 20px 36px; width: 100%; max-width: 480px;
+        animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .share-title { font-size: 1rem; font-weight: 900; margin-bottom: 16px; text-align: center; }
+    .share-options { display: flex; justify-content: center; gap: 20px; margin-bottom: 16px; }
+    .share-opt {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        cursor: pointer; background: none; border: none; font-family: inherit;
+    }
+    .share-opt .share-icon {
+        width: 52px; height: 52px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+    }
+    .share-opt span { font-size: .72rem; font-weight: 600; color: #8C8070; }
+    .share-icon.kakao { background: #FEE500; }
+    .share-icon.link { background: #F5F1EB; }
+    .share-icon.twitter { background: #1DA1F2; color: #fff; }
+    .share-icon.more { background: #E8E2DA; }
+    .btn-share-close {
+        width: 100%; height: 46px; border-radius: 12px;
+        border: 1.5px solid #E8E2DA; background: #fff;
+        font-family: inherit; font-size: .9rem; font-weight: 700;
+        color: #8C8070; cursor: pointer;
+    }
+    .toast {
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        background: #4A4035; color: #fff; padding: 10px 24px;
+        border-radius: 10px; font-size: .82rem; font-weight: 700;
+        z-index: 300; opacity: 0; transition: opacity .3s;
+    }
+    .toast.show { opacity: 1; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp .3s ease-out; }
+</style>
+</head>
+<body>
+<div class="app">
+
+    <!-- ══════ Login ══════ -->
+    <div id="login-view" class="login-view">
+        <div class="login-logo-area">
+            <div style="display:inline-block; margin-bottom:12px;">
+                <svg viewBox="0 0 120 100" width="120" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="30" cy="72" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(-20 30 72)"/>
+                    <ellipse cx="78" cy="76" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(15 78 76)"/>
+                    <ellipse cx="28" cy="54" rx="9" ry="5.5" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(-10 28 54)"/>
+                    <path d="M18 60 L10 55" stroke="#F2DC8C" stroke-width="4" stroke-linecap="round"/>
+                    <ellipse cx="55" cy="58" rx="35" ry="20" fill="#F5E6C8" stroke="#3A9B6A" stroke-width="2"/>
+                    <ellipse cx="52" cy="42" rx="32" ry="28" fill="#7EDCAA" stroke="#3A9B6A" stroke-width="2.5"/>
+                    <path d="M52 18 L42 32 L42 48 L52 58 L62 48 L62 32 Z" fill="none" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                    <line x1="42" y1="32" x2="24" y2="38" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                    <line x1="62" y1="32" x2="80" y2="38" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                    <line x1="42" y1="48" x2="26" y2="56" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                    <line x1="62" y1="48" x2="78" y2="56" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                    <ellipse cx="42" cy="26" rx="6" ry="4" fill="white" opacity=".35" transform="rotate(-15 42 26)"/>
+                    <ellipse cx="62" cy="36" rx="4" ry="3" fill="white" opacity=".2"/>
+                    <ellipse cx="92" cy="40" rx="17" ry="15" fill="#F5E6C8" stroke="#3A9B6A" stroke-width="2.5"/>
+                    <ellipse cx="82" cy="72" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(10 82 72)"/>
+                    <circle cx="99" cy="35" r="4" fill="white" stroke="#3A9B6A" stroke-width="1.5"/>
+                    <circle cx="100" cy="34" r="2.5" fill="#3A9B6A"/>
+                    <circle cx="101" cy="33" r="1" fill="white"/>
+                    <circle cx="100" cy="44" r="3.5" fill="#F0A050" opacity=".4"/>
+                    <path d="M94 46 Q98 50 103 46" fill="none" stroke="#3A9B6A" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h1><span style="color:#6BADE8;">점</span><span style="color:#F0A050;">잇</span><span style="color:#4A4035;">기</span></h1>
+            <p class="login-subtitle">보고 따라 점을 이어 보세요!</p>
+        </div>
+        <div class="login-buttons">
+            <button class="login-btn kakao" onclick="socialLogin('kakao')">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 1C4.477 1 0 4.477 0 8.667c0 2.7 1.753 5.072 4.393 6.413-.192.717-.694 2.6-.794 3.004-.124.497.182.49.383.356.158-.105 2.51-1.708 3.525-2.398.8.118 1.628.18 2.493.18 5.523 0 10-3.477 10-7.555C20 4.477 15.523 1 10 1z" fill="#191919"/></svg>
+                카카오 로그인
+            </button>
+            <button class="login-btn naver" onclick="socialLogin('naver')">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M13.57 10.684L6.066 0H0v20h6.43V9.316L13.934 20H20V0h-6.43v10.684z" fill="white"/></svg>
+                네이버 로그인
+            </button>
+            <button class="login-btn google" onclick="socialLogin('google')">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" fill="#FFC107"/><path d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" fill="#FF3D00"/><path d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" fill="#4CAF50"/><path d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.001-.001 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" fill="#1976D2"/></svg>
+                Google 로그인
+            </button>
+            <button class="login-btn facebook" onclick="socialLogin('facebook')">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" fill="white"/></svg>
+                Facebook 로그인
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════ Home ══════ -->
+    <div id="home-view" class="hidden" style="position:relative; width:100%;">
+        <button class="btn-share-home" onclick="shareApp()" title="공유하기">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13"/></svg>
+        </button>
+        <div class="app-header">
+            <svg viewBox="0 0 120 100" width="100" height="84" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="30" cy="72" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(-20 30 72)"/>
+                <ellipse cx="78" cy="76" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(15 78 76)"/>
+                <ellipse cx="28" cy="54" rx="9" ry="5.5" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(-10 28 54)"/>
+                <path d="M18 60 L10 55" stroke="#F2DC8C" stroke-width="4" stroke-linecap="round"/>
+                <ellipse cx="55" cy="58" rx="35" ry="20" fill="#F5E6C8" stroke="#3A9B6A" stroke-width="2"/>
+                <ellipse cx="52" cy="42" rx="32" ry="28" fill="#7EDCAA" stroke="#3A9B6A" stroke-width="2.5"/>
+                <path d="M52 18 L42 32 L42 48 L52 58 L62 48 L62 32 Z" fill="none" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                <line x1="42" y1="32" x2="24" y2="38" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                <line x1="62" y1="32" x2="80" y2="38" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                <line x1="42" y1="48" x2="26" y2="56" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                <line x1="62" y1="48" x2="78" y2="56" stroke="#3A9B6A" stroke-width="1.3" opacity=".35"/>
+                <ellipse cx="42" cy="26" rx="6" ry="4" fill="white" opacity=".35" transform="rotate(-15 42 26)"/>
+                <ellipse cx="62" cy="36" rx="4" ry="3" fill="white" opacity=".2"/>
+                <ellipse cx="92" cy="40" rx="17" ry="15" fill="#F5E6C8" stroke="#3A9B6A" stroke-width="2.5"/>
+                <ellipse cx="82" cy="72" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(10 82 72)"/>
+                <circle cx="99" cy="35" r="4" fill="white" stroke="#3A9B6A" stroke-width="1.5"/>
+                <circle cx="100" cy="34" r="2.5" fill="#3A9B6A"/>
+                <circle cx="101" cy="33" r="1" fill="white"/>
+                <circle cx="100" cy="44" r="3.5" fill="#F0A050" opacity=".4"/>
+                <path d="M94 46 Q98 50 103 46" fill="none" stroke="#3A9B6A" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <h1><span style="color:#6BADE8;">점</span><span style="color:#F0A050;">잇</span><span style="color:#4A4035;">기</span></h1>
+        </div>
+
+        <p class="sec-label">격자 크기</p>
+        <div class="grid-select" id="grid-select"></div>
+
+        <p class="sec-label">점 개수 (선분 수)</p>
+        <div class="row-btns" id="dots-select"></div>
+
+        <button class="start-btn" onclick="startGame()">시작하기</button>
+
+        <div style="text-align:center; margin-top:24px;">
+            <button class="logout-btn" onclick="goLogin()">로그아웃</button>
+        </div>
+    </div>
+
+    <!-- ══════ Game ══════ -->
+    <div id="game-view" class="hidden" style="width:100%;">
+        <div class="game-nav">
+            <button class="btn-back" onclick="goHome()" title="홈">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-8 9 8M5 11v9a1 1 0 001 1h3m8 0h3a1 1 0 001-1v-9"/></svg>
+            </button>
+            <span class="nav-title" id="nav-title"></span>
+            <span class="badge" id="diff-badge"></span>
+        </div>
+        <div class="game-boards" id="game-boards">
+            <div class="board-wrapper">
+                <div class="board-label">문제</div>
+                <div class="board-container"><canvas id="cv-question"></canvas></div>
+            </div>
+            <div class="board-wrapper">
+                <div class="board-label">나의 답</div>
+                <div class="board-container"><canvas id="cv-answer"></canvas></div>
+            </div>
+        </div>
+        <p class="game-hint" id="game-hint">점을 눌러 선을 그으세요</p>
+        <div style="text-align:center;">
+            <button class="btn-undo" id="btn-undo" onclick="undoLine()" style="display:none;">↩ 되돌리기</button>
+        </div>
+    </div>
+
+    <!-- ══════ Result Overlay ══════ -->
+    <div class="result-overlay" id="result-overlay">
+        <div class="result-card">
+            <div class="result-emoji" id="result-emoji"></div>
+            <div class="result-text" id="result-text"></div>
+            <div class="result-sub" id="result-sub"></div>
+            <div class="result-actions">
+                <button class="btn-retry" onclick="retryGame()">다시 하기</button>
+                <button class="btn-next" onclick="nextGame()">다음 문제</button>
+            </div>
+            <button class="btn-share-result" onclick="openShare()">공유하기</button>
+        </div>
+    </div>
+
+    <!-- ══════ Share Sheet ══════ -->
+    <div class="share-overlay" id="share-overlay" onclick="closeShare(event)">
+        <div class="share-sheet" onclick="event.stopPropagation()">
+            <div class="share-title">결과 공유하기</div>
+            <div class="share-options">
+                <button class="share-opt" onclick="shareKakao()">
+                    <div class="share-icon kakao"><svg width="24" height="24" viewBox="0 0 20 20"><path d="M10 1C4.477 1 0 4.477 0 8.667c0 2.7 1.753 5.072 4.393 6.413-.192.717-.694 2.6-.794 3.004-.124.497.182.49.383.356.158-.105 2.51-1.708 3.525-2.398.8.118 1.628.18 2.493.18 5.523 0 10-3.477 10-7.555C20 4.477 15.523 1 10 1z" fill="#191919"/></svg></div>
+                    <span>카카오톡</span>
+                </button>
+                <button class="share-opt" onclick="copyLink()">
+                    <div class="share-icon link">🔗</div>
+                    <span>링크 복사</span>
+                </button>
+                <button class="share-opt" onclick="shareTwitter()">
+                    <div class="share-icon twitter">𝕏</div>
+                    <span>트위터</span>
+                </button>
+                <button class="share-opt" onclick="shareNative()">
+                    <div class="share-icon more">⋯</div>
+                    <span>더보기</span>
+                </button>
+            </div>
+            <button class="btn-share-close" onclick="closeShare()">닫기</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ─── State ───
+let selectedGrid = 3;
+let selectedDots = 3;
+let questionEdges = [];
+let answerEdges = [];
+let answerInProgress = null;
+let streak = 0;
+let puzzle = null;
+
+const GRID_OPTIONS = [
+    { size: 2, label: '2×2' },
+    { size: 3, label: '3×3' },
+    { size: 4, label: '4×4' },
+    { size: 5, label: '5×5' },
+];
+const DOT_COUNTS = { 2: [2,3], 3: [3,4], 4: [4,5], 5: [5,6] };
+
+// ─── Navigation ───
+function showView(id) {
+    document.getElementById('login-view').style.display = id === 'login-view' ? '' : 'none';
+    document.getElementById('home-view').className = id === 'home-view' ? '' : 'hidden';
+    document.getElementById('home-view').style.position = 'relative';
+    document.getElementById('home-view').style.width = '100%';
+    document.getElementById('game-view').className = id === 'game-view' ? '' : 'hidden';
+    document.getElementById('game-view').style.width = '100%';
+}
+function socialLogin() { goHome(); }
+function goLogin() { showView('login-view'); }
+function goHome() {
+    showView('home-view');
+    renderGridSelect();
+    renderDotsSelect();
+    closeResult();
+}
+
+// ─── Home: Grid Select ───
+function renderGridSelect() {
+    const cont = document.getElementById('grid-select');
+    cont.innerHTML = '';
+    GRID_OPTIONS.forEach(opt => {
+        const card = document.createElement('div');
+        card.className = 'grid-card' + (opt.size === selectedGrid ? ' selected' : '');
+        const cvs = document.createElement('canvas');
+        cvs.width = 128; cvs.height = 128;
+        card.appendChild(cvs);
+        const sp = document.createElement('span');
+        sp.className = 'g-name';
+        sp.textContent = opt.label;
+        card.appendChild(sp);
+        card.onclick = () => {
+            selectedGrid = opt.size;
+            selectedDots = DOT_COUNTS[selectedGrid][0];
+            renderGridSelect();
+            renderDotsSelect();
+        };
+        cont.appendChild(card);
+        drawMiniGrid(cvs, opt.size);
+    });
+}
+function drawMiniGrid(cvs, size) {
+    const ctx = cvs.getContext('2d');
+    const pad = 24, w = cvs.width, h = cvs.height;
+    const step = (w - 2 * pad) / (size - 1);
+    ctx.clearRect(0, 0, w, h);
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            ctx.beginPath();
+            ctx.arc(pad + c * step, pad + r * step, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#B8AD9E';
+            ctx.fill();
+        }
+    }
+}
+
+// ─── Home: Dots Select ───
+function renderDotsSelect() {
+    const cont = document.getElementById('dots-select');
+    cont.innerHTML = '';
+    DOT_COUNTS[selectedGrid].forEach(n => {
+        const btn = document.createElement('button');
+        btn.className = 'seg-btn' + (n === selectedDots ? ' sel-green' : '');
+        btn.textContent = n + '개 점 (' + (n-1) + '선)';
+        btn.onclick = () => { selectedDots = n; renderDotsSelect(); };
+        cont.appendChild(btn);
+    });
+}
+
+// ─── Puzzle Generation ───
+function idx(r, c, size) { return r * size + c; }
+function rc(i, size) { return [Math.floor(i / size), i % size]; }
+
+function generatePuzzle(gridSize, dotCount) {
+    const total = gridSize * gridSize;
+    for (let attempt = 0; attempt < 300; attempt++) {
+        let visited = new Set();
+        let path = [];
+        let start = Math.floor(Math.random() * total);
+        visited.add(start);
+        path.push(start);
+        while (path.length < dotCount) {
+            const curr = path[path.length - 1];
+            const [cr, cc] = rc(curr, gridSize);
+            let neighbours = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = cr + dr, nc = cc + dc;
+                    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+                        const ni = idx(nr, nc, gridSize);
+                        if (!visited.has(ni)) neighbours.push(ni);
+                    }
+                }
+            }
+            if (neighbours.length === 0) break;
+            const next = neighbours[Math.floor(Math.random() * neighbours.length)];
+            visited.add(next);
+            path.push(next);
+        }
+        if (path.length === dotCount) {
+            const edges = [];
+            for (let i = 0; i < path.length - 1; i++) edges.push([path[i], path[i+1]]);
+            return { dots: path, edges };
+        }
+    }
+    const dots = []; for (let i = 0; i < dotCount; i++) dots.push(i);
+    const edges = []; for (let i = 0; i < dots.length - 1; i++) edges.push([dots[i], dots[i+1]]);
+    return { dots, edges };
+}
+
+// ─── Game ───
+function startGame() {
+    puzzle = generatePuzzle(selectedGrid, selectedDots);
+    questionEdges = puzzle.edges;
+    answerEdges = [];
+    answerInProgress = null;
+    showView('game-view');
+
+    document.getElementById('nav-title').textContent = selectedGrid + '×' + selectedGrid + ' 점잇기';
+    document.getElementById('diff-badge').textContent = selectedDots + '개 점';
+    document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
+    document.getElementById('btn-undo').style.display = 'none';
+
+    requestAnimationFrame(() => {
+        setupCanvas('cv-question');
+        setupCanvas('cv-answer');
+        drawBoard('cv-question', questionEdges, true);
+        drawBoard('cv-answer', answerEdges, false);
+    });
+}
+
+function setupCanvas(id) {
+    const cvs = document.getElementById(id);
+    const rect = cvs.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    cvs.width = rect.width * dpr;
+    cvs.height = rect.height * dpr;
+    cvs.style.width = rect.width + 'px';
+    cvs.style.height = rect.height + 'px';
+    cvs.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function getDotPositions(canvasEl) {
+    const rect = canvasEl.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    const pad = w * 0.15;
+    const size = selectedGrid;
+    const stepX = size > 1 ? (w - 2 * pad) / (size - 1) : 0;
+    const stepY = size > 1 ? (h - 2 * pad) / (size - 1) : 0;
+    const positions = [];
+    for (let r = 0; r < size; r++)
+        for (let c = 0; c < size; c++)
+            positions.push({ x: pad + c * stepX, y: pad + r * stepY });
+    return positions;
+}
+
+function drawBoard(canvasId, edges, isQuestion) {
+    const cvs = document.getElementById(canvasId);
+    const ctx = cvs.getContext('2d');
+    const rect = cvs.parentElement.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const positions = getDotPositions(cvs);
+    const dotRadius = Math.max(7, w * 0.04);
+
+    // Draw edges
+    ctx.lineWidth = Math.max(3, w * 0.018);
+    ctx.lineCap = 'round';
+    edges.forEach(([a, b]) => {
+        const pa = positions[a], pb = positions[b];
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.strokeStyle = isQuestion ? '#4A4035' : '#5BC886';
+        ctx.stroke();
+    });
+
+    // Draw dots
+    const total = selectedGrid * selectedGrid;
+    const puzzleDotSet = new Set(puzzle ? puzzle.dots : []);
+    const usedInEdges = new Set();
+    edges.forEach(([a, b]) => { usedInEdges.add(a); usedInEdges.add(b); });
+
+    for (let i = 0; i < total; i++) {
+        const p = positions[i];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
+        if (isQuestion) {
+            ctx.fillStyle = puzzleDotSet.has(i) ? '#4A4035' : '#D8D2CA';
+        } else {
+            if (usedInEdges.has(i)) ctx.fillStyle = '#5BC886';
+            else if (puzzleDotSet.has(i)) ctx.fillStyle = '#B8AD9E';
+            else ctx.fillStyle = '#D8D2CA';
+        }
+        ctx.fill();
+
+        // Highlight selected
+        if (!isQuestion && answerInProgress && answerInProgress.from === i) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, dotRadius + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = '#F0A050';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+    }
+}
+
+// ─── Answer Interaction ───
+(function() {
+    const cvs = document.getElementById('cv-answer');
+    function getClickedDot(e) {
+        const rect = cvs.getBoundingClientRect();
+        let cx, cy;
+        if (e.changedTouches) {
+            cx = e.changedTouches[0].clientX - rect.left;
+            cy = e.changedTouches[0].clientY - rect.top;
+        } else {
+            cx = e.clientX - rect.left;
+            cy = e.clientY - rect.top;
+        }
+        const positions = getDotPositions(cvs);
+        const hitRadius = Math.max(24, rect.width * 0.1);
+        let best = -1, bestDist = Infinity;
+        for (let i = 0; i < positions.length; i++) {
+            if (!puzzle || !puzzle.dots.includes(i)) continue;
+            const p = positions[i];
+            const dist = Math.sqrt((cx - p.x) ** 2 + (cy - p.y) ** 2);
+            if (dist < hitRadius && dist < bestDist) { best = i; bestDist = dist; }
+        }
+        return best;
+    }
+
+    function handleTap(e) {
+        e.preventDefault();
+        if (!puzzle) return;
+        const dotIdx = getClickedDot(e);
+        if (dotIdx < 0) {
+            if (answerInProgress) { answerInProgress = null; drawBoard('cv-answer', answerEdges, false); }
+            return;
+        }
+        if (!answerInProgress) {
+            answerInProgress = { from: dotIdx };
+            document.getElementById('game-hint').textContent = '다음 점을 눌러 선을 이으세요';
+        } else {
+            const from = answerInProgress.from;
+            const to = dotIdx;
+            answerInProgress = null;
+            if (from !== to) {
+                const exists = answerEdges.some(([a,b]) => (a===from&&b===to)||(a===to&&b===from));
+                if (!exists) {
+                    answerEdges.push([from, to]);
+                    document.getElementById('btn-undo').style.display = '';
+                }
+            }
+            document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
+        }
+        drawBoard('cv-answer', answerEdges, false);
+        checkAnswer();
+    }
+
+    cvs.addEventListener('click', handleTap);
+    cvs.addEventListener('touchend', handleTap);
+})();
+
+function undoLine() {
+    if (answerEdges.length > 0) {
+        answerEdges.pop();
+        answerInProgress = null;
+        drawBoard('cv-answer', answerEdges, false);
+        if (answerEdges.length === 0) document.getElementById('btn-undo').style.display = 'none';
+    }
+}
+
+function edgeKey(a, b) { return a < b ? a + '-' + b : b + '-' + a; }
+
+function checkAnswer() {
+    if (answerEdges.length < questionEdges.length) return;
+    const qSet = new Set(questionEdges.map(([a,b]) => edgeKey(a,b)));
+    const aSet = new Set(answerEdges.map(([a,b]) => edgeKey(a,b)));
+    let correct = 0;
+    qSet.forEach(k => { if (aSet.has(k)) correct++; });
+    if (answerEdges.length === questionEdges.length) {
+        if (correct === questionEdges.length) { streak++; showResult(true); }
+        else { streak = 0; showResult(false); }
+    }
+}
+
+function showResult(success) {
+    document.getElementById('result-overlay').classList.add('active');
+    document.getElementById('result-emoji').textContent = success ? '🎉' : '😅';
+    document.getElementById('result-text').textContent = success ? '정답!' : '오답!';
+    document.getElementById('result-sub').textContent = success
+        ? '연속 ' + streak + '문제 정답!'
+        : '선의 위치가 달라요. 다시 도전하세요!';
+}
+function closeResult() { document.getElementById('result-overlay').classList.remove('active'); }
+function retryGame() {
+    closeResult();
+    answerEdges = [];
+    answerInProgress = null;
+    document.getElementById('btn-undo').style.display = 'none';
+    drawBoard('cv-answer', answerEdges, false);
+    document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
+}
+function nextGame() { closeResult(); startGame(); }
+
+// ─── Share ───
+function shareApp() {
+    const title = document.title;
+    const url = window.location.href;
+    const text = title + ' - 보고 따라 점을 이어 보세요!';
+    if (navigator.share) {
+        navigator.share({ title: title, text: text, url: url }).catch(function(){});
+    } else {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function() { showToast('링크가 복사되었습니다!'); });
+        } else {
+            prompt('링크를 복사하세요:', url);
+        }
+    }
+}
+function openShare() { document.getElementById('share-overlay').classList.add('active'); }
+function closeShare(e) {
+    if (e && e.target !== document.getElementById('share-overlay')) return;
+    document.getElementById('share-overlay').classList.remove('active');
+}
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
+function copyLink() {
+    const text = '점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/dot2dot/';
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => showToast('링크가 복사되었습니다'));
+    } else { showToast('복사 실패'); }
+    closeShare();
+}
+function shareKakao() {
+    const text = encodeURIComponent('점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/dot2dot/');
+    window.open('https://story.kakao.com/share?url=' + encodeURIComponent('https://sprit6487.github.io/dot2dot/') + '&text=' + text, '_blank');
+    closeShare();
+}
+function shareTwitter() {
+    const text = encodeURIComponent('점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!');
+    window.open('https://twitter.com/intent/tweet?text=' + text + '&url=' + encodeURIComponent('https://sprit6487.github.io/dot2dot/'), '_blank');
+    closeShare();
+}
+function shareNative() {
+    if (navigator.share) {
+        navigator.share({
+            title: '점잇기',
+            text: '점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!',
+            url: 'https://sprit6487.github.io/dot2dot/'
+        });
+    } else { copyLink(); }
+    closeShare();
+}
+
+// ─── Init ───
+renderGridSelect();
+renderDotsSelect();
+</script>
+</body>
+</html>
