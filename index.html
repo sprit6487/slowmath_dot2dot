@@ -373,8 +373,10 @@
         <p class="sec-label">점 개수 (선분 수)</p>
         <div class="row-btns" id="dots-select"></div>
 
+        <div id="turn-section">
         <p class="sec-label">방향 전환</p>
         <div class="row-btns" id="turn-select"></div>
+        </div>
 
         <p class="sec-label">사선(대각선)</p>
         <div class="row-btns" id="diag-select"></div>
@@ -493,6 +495,7 @@ function goHome() {
     renderGridSelect();
     renderDotsSelect();
     renderTurnSelect();
+    updateTurnVisibility();
     renderDiagSelect();
     closeResult();
 }
@@ -514,8 +517,10 @@ function renderGridSelect() {
         card.onclick = function() {
             selectedGrid = opt.size;
             selectedDots = DOT_COUNTS[selectedGrid][0];
+            if (selectedGrid === 2) maxTurns = -1;
             renderGridSelect();
             renderDotsSelect();
+            updateTurnVisibility();
         };
         cont.appendChild(card);
         drawMiniGrid(cvs, opt.size);
@@ -550,6 +555,9 @@ function renderDotsSelect() {
 }
 
 // ─── Home: Turn Limit Select ───
+function updateTurnVisibility() {
+    document.getElementById('turn-section').style.display = selectedGrid === 2 ? 'none' : '';
+}
 function renderTurnSelect() {
     var cont = document.getElementById('turn-select');
     cont.innerHTML = '';
@@ -1102,6 +1110,7 @@ function shareNative() {
 renderGridSelect();
 renderDotsSelect();
 renderTurnSelect();
+updateTurnVisibility();
 renderDiagSelect();
 </script>
 </body>
