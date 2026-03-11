@@ -373,6 +373,9 @@
         <p class="sec-label">점 개수 (선분 수)</p>
         <div class="row-btns" id="dots-select"></div>
 
+        <p class="sec-label">방향 전환</p>
+        <div class="row-btns" id="turn-select"></div>
+
         <p class="sec-label">사선(대각선)</p>
         <div class="row-btns" id="diag-select"></div>
 
@@ -456,6 +459,7 @@
 var selectedGrid = 3;
 var selectedDots = 3;
 var allowDiagonal = false;
+var maxTurns = -1; // -1 = 제한 없음
 var questionEdges = [];
 var answerEdges = [];
 var streak = 0;
@@ -489,6 +493,7 @@ function goHome() {
     showView('home-view');
     renderGridSelect();
     renderDotsSelect();
+    renderTurnSelect();
     renderDiagSelect();
     closeResult();
 }
@@ -545,6 +550,19 @@ function renderDotsSelect() {
     });
 }
 
+// ─── Home: Turn Limit Select ───
+function renderTurnSelect() {
+    var cont = document.getElementById('turn-select');
+    cont.innerHTML = '';
+    [{val:1, label:'1\uBC88 \uC774\uD558'}, {val:2, label:'2\uBC88 \uC774\uD558'}, {val:3, label:'3\uBC88 \uC774\uD558'}, {val:-1, label:'\uC81C\uD55C \uC5C6\uC74C'}].forEach(function(opt) {
+        var btn = document.createElement('button');
+        btn.className = 'seg-btn' + (maxTurns === opt.val ? ' sel-blue' : '');
+        btn.textContent = opt.label;
+        btn.onclick = function() { maxTurns = opt.val; renderTurnSelect(); };
+        cont.appendChild(btn);
+    });
+}
+
 // ─── Home: Diagonal Select ───
 function renderDiagSelect() {
     var cont = document.getElementById('diag-select');
@@ -582,7 +600,19 @@ function getNeighbours(curr, gridSize, useDiag) {
     return neighbours;
 }
 
-function generatePuzzle(gridSize, dotCount, useDiag) {
+function countTurns(path, gridSize) {
+    if (path.length < 3) return 0;
+    var turns = 0;
+    for (var i = 1; i < path.length - 1; i++) {
+        var prev = rc(path[i-1], gridSize), cur = rc(path[i], gridSize), nxt = rc(path[i+1], gridSize);
+        var dr1 = cur[0] - prev[0], dc1 = cur[1] - prev[1];
+        var dr2 = nxt[0] - cur[0], dc2 = nxt[1] - cur[1];
+        if (dr1 !== dr2 || dc1 !== dc2) turns++;
+    }
+    return turns;
+}
+
+function generatePuzzle(gridSize, dotCount, useDiag, turnLimit) {
     var total = gridSize * gridSize;
     for (var attempt = 0; attempt < 500; attempt++) {
         var visited = {};
@@ -612,6 +642,7 @@ function generatePuzzle(gridSize, dotCount, useDiag) {
                 }
                 if (hasDiag) continue;
             }
+            if (turnLimit >= 0 && countTurns(path, gridSize) > turnLimit) continue;
             return { dots: path, edges: edges };
         }
     }
@@ -622,7 +653,7 @@ function generatePuzzle(gridSize, dotCount, useDiag) {
 
 // ─── Game ───
 function startGame() {
-    puzzle = generatePuzzle(selectedGrid, selectedDots, allowDiagonal);
+    puzzle = generatePuzzle(selectedGrid, selectedDots, allowDiagonal, maxTurns);
     questionEdges = puzzle.edges;
     answerEdges = [];
     allStrokes = [];
@@ -980,6 +1011,7 @@ function shareNative() {
 // ─── Init ───
 renderGridSelect();
 renderDotsSelect();
+renderTurnSelect();
 renderDiagSelect();
 </script>
 </body>
