@@ -402,9 +402,10 @@
                 <div class="board-container"><canvas id="cv-answer"></canvas></div>
             </div>
         </div>
-        <p class="game-hint" id="game-hint">점에서 드래그하여 선을 그으세요</p>
-        <div style="text-align:center;">
+        <p class="game-hint" id="game-hint">손가락으로 점과 점 사이에 선을 그으세요</p>
+        <div style="display:flex; justify-content:center; gap:10px; margin-top:4px;">
             <button class="btn-undo" id="btn-undo" onclick="undoLine()" style="display:none;">↩ 되돌리기</button>
+            <button class="btn-undo" id="btn-clear" onclick="clearAll()" style="display:none;">✕ 전체 지우기</button>
         </div>
     </div>
 
@@ -461,11 +462,10 @@ var answerEdges = [];
 var streak = 0;
 var puzzle = null;
 
-// Drag state
-var dragFrom = -1;
-var dragCurX = 0;
-var dragCurY = 0;
-var isDragging = false;
+// Free-draw state
+var drawingPoints = [];   // current stroke [{x,y}, ...]
+var isDrawing = false;
+var allStrokes = [];       // saved freehand strokes for display
 
 var GRID_OPTIONS = [
     { size: 2, label: '2\u00d72' },
@@ -570,11 +570,10 @@ function isDiagonalEdge(a, b, gridSize) {
 
 function getNeighbours(curr, gridSize, useDiag) {
     var cr = rc(curr, gridSize);
-    var neighbours = [];
-    // 4-directional
     var dirs4 = [[-1,0],[1,0],[0,-1],[0,1]];
     var dirs8 = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
     var dirs = useDiag ? dirs8 : dirs4;
+    var neighbours = [];
     for (var i = 0; i < dirs.length; i++) {
         var nr = cr[0] + dirs[i][0], nc = cr[1] + dirs[i][1];
         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
@@ -607,7 +606,6 @@ function generatePuzzle(gridSize, dotCount, useDiag) {
         if (path.length === dotCount) {
             var edges = [];
             for (var j = 0; j < path.length - 1; j++) edges.push([path[j], path[j+1]]);
-            // If no diagonal mode, verify no diagonal edges (should be guaranteed by generation)
             if (!useDiag) {
                 var hasDiag = false;
                 for (var k = 0; k < edges.length; k++) {
@@ -618,7 +616,6 @@ function generatePuzzle(gridSize, dotCount, useDiag) {
             return { dots: path, edges: edges };
         }
     }
-    // fallback
     var dots = []; for (var f = 0; f < dotCount; f++) dots.push(f);
     var edges2 = []; for (var g = 0; g < dots.length - 1; g++) edges2.push([dots[g], dots[g+1]]);
     return { dots: dots, edges: edges2 };
@@ -629,20 +626,22 @@ function startGame() {
     puzzle = generatePuzzle(selectedGrid, selectedDots, allowDiagonal);
     questionEdges = puzzle.edges;
     answerEdges = [];
-    dragFrom = -1;
-    isDragging = false;
+    allStrokes = [];
+    drawingPoints = [];
+    isDrawing = false;
     showView('game-view');
 
     document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' \uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30';
     document.getElementById('diff-badge').textContent = selectedDots + '\uAC1C \uC810' + (allowDiagonal ? ' \u00b7 \uC0AC\uC120' : '');
-    document.getElementById('game-hint').textContent = '\uC810\uC5D0\uC11C \uB4DC\uB798\uADF8\uD558\uC5EC \uC120\uC744 \uADF8\uC73C\uC138\uC694';
+    document.getElementById('game-hint').textContent = '\uC190\uAC00\uB77D\uC73C\uB85C \uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
     document.getElementById('btn-undo').style.display = 'none';
+    document.getElementById('btn-clear').style.display = 'none';
 
     requestAnimationFrame(function() {
         setupCanvas('cv-question');
         setupCanvas('cv-answer');
         drawBoard('cv-question', questionEdges, true);
-        drawBoard('cv-answer', answerEdges, false);
+        drawAnswerBoard();
     });
 }
 
@@ -690,21 +689,59 @@ function drawBoard(canvasId, edges, isQuestion) {
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
-        ctx.strokeStyle = isQuestion ? '#4A4035' : '#5BC886';
+        ctx.strokeStyle = '#4A4035';
         ctx.stroke();
     }
 
-    // Draw drag preview line
-    if (!isQuestion && isDragging && dragFrom >= 0) {
-        var pf = positions[dragFrom];
+    // Draw dots
+    var total = selectedGrid * selectedGrid;
+    var puzzleDotSet = {};
+    if (puzzle) for (var d = 0; d < puzzle.dots.length; d++) puzzleDotSet[puzzle.dots[d]] = true;
+
+    for (var i = 0; i < total; i++) {
+        var p = positions[i];
         ctx.beginPath();
-        ctx.moveTo(pf.x, pf.y);
-        ctx.lineTo(dragCurX, dragCurY);
-        ctx.strokeStyle = 'rgba(91,200,134,0.45)';
-        ctx.lineWidth = lineW;
-        ctx.setLineDash([6, 6]);
+        ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = puzzleDotSet[i] ? '#4A4035' : '#D8D2CA';
+        ctx.fill();
+    }
+}
+
+// ─── Answer Board: shows freehand strokes + snapped edges + dots ───
+function drawAnswerBoard() {
+    var cvs = document.getElementById('cv-answer');
+    var ctx = cvs.getContext('2d');
+    var rect = cvs.parentElement.getBoundingClientRect();
+    var w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    var positions = getDotPositions(cvs);
+    var dotRadius = Math.max(7, w * 0.04);
+    var lineW = Math.max(3, w * 0.018);
+
+    // Draw snapped answer edges (green)
+    ctx.lineWidth = lineW;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (var e = 0; e < answerEdges.length; e++) {
+        var pa = positions[answerEdges[e][0]], pb = positions[answerEdges[e][1]];
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.strokeStyle = '#5BC886';
         ctx.stroke();
-        ctx.setLineDash([]);
+    }
+
+    // Draw current freehand stroke (live)
+    if (isDrawing && drawingPoints.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(drawingPoints[0].x, drawingPoints[0].y);
+        for (var s = 1; s < drawingPoints.length; s++) {
+            ctx.lineTo(drawingPoints[s].x, drawingPoints[s].y);
+        }
+        ctx.strokeStyle = 'rgba(91,200,134,0.6)';
+        ctx.lineWidth = Math.max(2.5, w * 0.015);
+        ctx.stroke();
     }
 
     // Draw dots
@@ -712,39 +749,29 @@ function drawBoard(canvasId, edges, isQuestion) {
     var puzzleDotSet = {};
     if (puzzle) for (var d = 0; d < puzzle.dots.length; d++) puzzleDotSet[puzzle.dots[d]] = true;
     var usedInEdges = {};
-    for (var u = 0; u < edges.length; u++) { usedInEdges[edges[u][0]] = true; usedInEdges[edges[u][1]] = true; }
+    for (var u = 0; u < answerEdges.length; u++) {
+        usedInEdges[answerEdges[u][0]] = true;
+        usedInEdges[answerEdges[u][1]] = true;
+    }
 
     for (var i = 0; i < total; i++) {
         var p = positions[i];
         ctx.beginPath();
         ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
-        if (isQuestion) {
-            ctx.fillStyle = puzzleDotSet[i] ? '#4A4035' : '#D8D2CA';
-        } else {
-            if (usedInEdges[i]) ctx.fillStyle = '#5BC886';
-            else if (puzzleDotSet[i]) ctx.fillStyle = '#B8AD9E';
-            else ctx.fillStyle = '#D8D2CA';
-        }
+        if (usedInEdges[i]) ctx.fillStyle = '#5BC886';
+        else if (puzzleDotSet[i]) ctx.fillStyle = '#B8AD9E';
+        else ctx.fillStyle = '#D8D2CA';
         ctx.fill();
-
-        // Highlight drag-from dot
-        if (!isQuestion && isDragging && dragFrom === i) {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, dotRadius + 6, 0, Math.PI * 2);
-            ctx.strokeStyle = '#F0A050';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-        }
     }
 }
 
-// ─── Drag-based Answer Interaction ───
+// ─── Free-draw Answer Interaction ───
 (function() {
     var cvs = document.getElementById('cv-answer');
 
-    function getNearestDot(cx, cy) {
+    function getNearestPuzzleDot(cx, cy) {
         var positions = getDotPositions(cvs);
-        var hitRadius = Math.max(24, cvs.getBoundingClientRect().width * 0.12);
+        var hitRadius = Math.max(28, cvs.getBoundingClientRect().width * 0.14);
         var best = -1, bestDist = Infinity;
         for (var i = 0; i < positions.length; i++) {
             if (!puzzle || !puzzle.dots.includes(i)) continue;
@@ -770,81 +797,97 @@ function drawBoard(canvasId, edges, isQuestion) {
         e.preventDefault();
         if (!puzzle) return;
         var pos = getPos(e);
-        var dot = getNearestDot(pos.x, pos.y);
-        if (dot < 0) return;
-        dragFrom = dot;
-        dragCurX = pos.x;
-        dragCurY = pos.y;
-        isDragging = true;
-        document.getElementById('game-hint').textContent = '\uB4DC\uB798\uADF8\uD558\uC5EC \uB2E4\uC74C \uC810\uC5D0 \uB193\uC73C\uC138\uC694';
-        drawBoard('cv-answer', answerEdges, false);
+        isDrawing = true;
+        drawingPoints = [pos];
+        drawAnswerBoard();
     }
 
     function onMove(e) {
-        if (!isDragging) return;
+        if (!isDrawing) return;
         e.preventDefault();
         var pos = getPos(e);
-        dragCurX = pos.x;
-        dragCurY = pos.y;
-        drawBoard('cv-answer', answerEdges, false);
+        drawingPoints.push(pos);
+        drawAnswerBoard();
     }
 
     function onEnd(e) {
-        if (!isDragging) return;
+        if (!isDrawing) return;
         e.preventDefault();
-        var pos = getPos(e);
-        var dot = getNearestDot(pos.x, pos.y);
-        if (dot >= 0 && dot !== dragFrom) {
-            var exists = false;
-            for (var i = 0; i < answerEdges.length; i++) {
-                var a = answerEdges[i][0], b = answerEdges[i][1];
-                if ((a === dragFrom && b === dot) || (a === dot && b === dragFrom)) { exists = true; break; }
-            }
-            if (!exists) {
-                answerEdges.push([dragFrom, dot]);
-                document.getElementById('btn-undo').style.display = '';
+        isDrawing = false;
+
+        // Analyze the stroke: find nearest puzzle dot to start and end
+        if (drawingPoints.length >= 2) {
+            var startPt = drawingPoints[0];
+            var endPt = drawingPoints[drawingPoints.length - 1];
+            var dotA = getNearestPuzzleDot(startPt.x, startPt.y);
+            var dotB = getNearestPuzzleDot(endPt.x, endPt.y);
+
+            if (dotA >= 0 && dotB >= 0 && dotA !== dotB) {
+                // Check not already exists
+                var exists = false;
+                for (var i = 0; i < answerEdges.length; i++) {
+                    var a = answerEdges[i][0], b = answerEdges[i][1];
+                    if ((a === dotA && b === dotB) || (a === dotB && b === dotA)) { exists = true; break; }
+                }
+                if (!exists) {
+                    answerEdges.push([dotA, dotB]);
+                    allStrokes.push(drawingPoints.slice());
+                    document.getElementById('btn-undo').style.display = '';
+                    document.getElementById('btn-clear').style.display = '';
+                }
             }
         }
-        dragFrom = -1;
-        isDragging = false;
-        document.getElementById('game-hint').textContent = '\uC810\uC5D0\uC11C \uB4DC\uB798\uADF8\uD558\uC5EC \uC120\uC744 \uADF8\uC73C\uC138\uC694';
-        drawBoard('cv-answer', answerEdges, false);
+
+        drawingPoints = [];
+        drawAnswerBoard();
         checkAnswer();
     }
 
-    // Touch events
+    function onCancel() {
+        isDrawing = false;
+        drawingPoints = [];
+        drawAnswerBoard();
+    }
+
     cvs.addEventListener('touchstart', onStart, { passive: false });
     cvs.addEventListener('touchmove', onMove, { passive: false });
     cvs.addEventListener('touchend', onEnd, { passive: false });
-    cvs.addEventListener('touchcancel', function() {
-        dragFrom = -1; isDragging = false;
-        drawBoard('cv-answer', answerEdges, false);
-    });
-
-    // Mouse events
+    cvs.addEventListener('touchcancel', onCancel);
     cvs.addEventListener('mousedown', onStart);
     cvs.addEventListener('mousemove', onMove);
     cvs.addEventListener('mouseup', onEnd);
-    cvs.addEventListener('mouseleave', function() {
-        if (isDragging) {
-            dragFrom = -1; isDragging = false;
-            drawBoard('cv-answer', answerEdges, false);
-        }
-    });
+    cvs.addEventListener('mouseleave', function() { if (isDrawing) onCancel(); });
 })();
 
 function undoLine() {
     if (answerEdges.length > 0) {
         answerEdges.pop();
-        drawBoard('cv-answer', answerEdges, false);
-        if (answerEdges.length === 0) document.getElementById('btn-undo').style.display = 'none';
+        allStrokes.pop();
+        drawAnswerBoard();
+        if (answerEdges.length === 0) {
+            document.getElementById('btn-undo').style.display = 'none';
+            document.getElementById('btn-clear').style.display = 'none';
+        }
     }
+}
+
+function clearAll() {
+    answerEdges = [];
+    allStrokes = [];
+    drawAnswerBoard();
+    document.getElementById('btn-undo').style.display = 'none';
+    document.getElementById('btn-clear').style.display = 'none';
+    document.getElementById('game-hint').textContent = '\uC190\uAC00\uB77D\uC73C\uB85C \uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
 }
 
 function edgeKey(a, b) { return a < b ? a + '-' + b : b + '-' + a; }
 
 function checkAnswer() {
-    if (answerEdges.length < questionEdges.length) return;
+    if (answerEdges.length < questionEdges.length) {
+        var remain = questionEdges.length - answerEdges.length;
+        document.getElementById('game-hint').textContent = '\uC120 ' + remain + '\uAC1C \uB354 \uADF8\uC73C\uC138\uC694';
+        return;
+    }
     var qSet = {};
     for (var i = 0; i < questionEdges.length; i++) qSet[edgeKey(questionEdges[i][0], questionEdges[i][1])] = true;
     var correct = 0;
@@ -869,10 +912,13 @@ function closeResult() { document.getElementById('result-overlay').classList.rem
 function retryGame() {
     closeResult();
     answerEdges = [];
-    dragFrom = -1; isDragging = false;
+    allStrokes = [];
+    isDrawing = false;
+    drawingPoints = [];
     document.getElementById('btn-undo').style.display = 'none';
-    drawBoard('cv-answer', answerEdges, false);
-    document.getElementById('game-hint').textContent = '\uC810\uC5D0\uC11C \uB4DC\uB798\uADF8\uD558\uC5EC \uC120\uC744 \uADF8\uC73C\uC138\uC694';
+    document.getElementById('btn-clear').style.display = 'none';
+    drawAnswerBoard();
+    document.getElementById('game-hint').textContent = '\uC190\uAC00\uB77D\uC73C\uB85C \uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
 }
 function nextGame() { closeResult(); startGame(); }
 
@@ -880,7 +926,7 @@ function nextGame() { closeResult(); startGame(); }
 function shareApp() {
     var title = document.title;
     var url = window.location.href;
-    var text = title + ' - \uBCF4\uACE0 \uB530\uB77C \uC810\uC744 \uC774\uC5B4 \uBCF4\uC138\uC694!';
+    var text = title + ' - \uB530\uB77C\uC11C \uC810\uC744 \uC774\uC5B4 \uBCF4\uC138\uC694!';
     if (navigator.share) {
         navigator.share({ title: title, text: text, url: url }).catch(function(){});
     } else if (navigator.clipboard) {
