@@ -24,7 +24,6 @@
         padding-bottom: max(24px, env(safe-area-inset-bottom));
         display: flex; flex-direction: column;
     }
-    /* Tablet */
     @media (min-width: 768px) {
         body { align-items: center; padding: 32px; }
         .app {
@@ -34,7 +33,6 @@
             padding: 44px 40px;
         }
     }
-    /* Large tablet / landscape */
     @media (min-width: 1024px) {
         .app { max-width: 720px; padding: 52px 56px; }
     }
@@ -64,7 +62,6 @@
     .login-btn.naver    { background: #03C75A; color: #FFF; }
     .login-btn.google   { background: #FFF; color: #444; border: 1.5px solid #DADCE0; }
     .login-btn.facebook { background: #1877F2; color: #FFF; }
-
     @media (min-width: 768px) {
         .login-logo-area h1 { font-size: 2.25rem; }
         .login-subtitle { font-size: 1.05rem; }
@@ -81,9 +78,7 @@
         font-size: 1.5rem; font-weight: 900;
         letter-spacing: -0.025em; margin: 8px 0 0; line-height: 1.2;
     }
-    @media (min-width: 768px) {
-        .app-header h1 { font-size: 1.75rem; }
-    }
+    @media (min-width: 768px) { .app-header h1 { font-size: 1.75rem; } }
 
     /* ── Section label ── */
     .sec-label { font-size: .875rem; font-weight: 700; color: #B8AD9E; margin: 0 0 10px; width: 100%; }
@@ -110,7 +105,7 @@
         .grid-card .g-name { font-size: .9rem; }
     }
 
-    /* ── Segment buttons (dots select) ── */
+    /* ── Segment buttons ── */
     .row-btns { display: flex; gap: 8px; margin-bottom: 14px; width: 100%; }
     .seg-btn {
         flex: 1; padding: 11px 0;
@@ -121,6 +116,7 @@
     }
     .seg-btn:active { transform: scale(.97); }
     .seg-btn.sel-green { border-color: #5BC886; background: #EDFAF2; color: #1A7A3A; }
+    .seg-btn.sel-blue  { border-color: #6BADE8; background: #EEF6FD; color: #3B7BBE; }
     @media (min-width: 768px) {
         .row-btns { gap: 12px; }
         .seg-btn { padding: 14px 0; font-size: .95rem; border-radius: 14px; }
@@ -271,7 +267,6 @@
         z-index: 300; opacity: 0; transition: opacity .3s;
     }
     .toast.show { opacity: 1; }
-
     @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     .fade-up { animation: fadeUp .3s ease-out; }
 </style>
@@ -307,7 +302,7 @@
                 </svg>
             </div>
             <h1><span style="color:#6BADE8;">느린</span><span style="color:#F0A050;">아이</span> <span style="color:#4A4035;">점잇기</span></h1>
-            <p class="login-subtitle">보고 따라 점을 이어 보세요!</p>
+            <p class="login-subtitle">따라서 점을 이어 보세요!</p>
         </div>
         <div class="login-buttons">
             <button class="login-btn kakao" onclick="socialLogin('kakao')">
@@ -366,6 +361,9 @@
         <p class="sec-label">점 개수 (선분 수)</p>
         <div class="row-btns" id="dots-select"></div>
 
+        <p class="sec-label">사선(대각선)</p>
+        <div class="row-btns" id="diag-select"></div>
+
         <button class="start-btn" onclick="startGame()">시작하기</button>
 
         <div style="text-align:center; margin-top:24px;">
@@ -392,7 +390,7 @@
                 <div class="board-container"><canvas id="cv-answer"></canvas></div>
             </div>
         </div>
-        <p class="game-hint" id="game-hint">점을 눌러 선을 그으세요</p>
+        <p class="game-hint" id="game-hint">점에서 드래그하여 선을 그으세요</p>
         <div style="text-align:center;">
             <button class="btn-undo" id="btn-undo" onclick="undoLine()" style="display:none;">↩ 되돌리기</button>
         </div>
@@ -443,21 +441,27 @@
 
 <script>
 // ─── State ───
-let selectedGrid = 3;
-let selectedDots = 3;
-let questionEdges = [];
-let answerEdges = [];
-let answerInProgress = null;
-let streak = 0;
-let puzzle = null;
+var selectedGrid = 3;
+var selectedDots = 3;
+var allowDiagonal = false;
+var questionEdges = [];
+var answerEdges = [];
+var streak = 0;
+var puzzle = null;
 
-const GRID_OPTIONS = [
-    { size: 2, label: '2×2' },
-    { size: 3, label: '3×3' },
-    { size: 4, label: '4×4' },
-    { size: 5, label: '5×5' },
+// Drag state
+var dragFrom = -1;
+var dragCurX = 0;
+var dragCurY = 0;
+var isDragging = false;
+
+var GRID_OPTIONS = [
+    { size: 2, label: '2\u00d72' },
+    { size: 3, label: '3\u00d73' },
+    { size: 4, label: '4\u00d74' },
+    { size: 5, label: '5\u00d75' },
 ];
-const DOT_COUNTS = { 2: [2,3], 3: [3,4], 4: [4,5], 5: [5,6] };
+var DOT_COUNTS = { 2: [2,3], 3: [3,4], 4: [4,5], 5: [5,6] };
 
 // ─── Navigation ───
 function showView(id) {
@@ -474,24 +478,25 @@ function goHome() {
     showView('home-view');
     renderGridSelect();
     renderDotsSelect();
+    renderDiagSelect();
     closeResult();
 }
 
 // ─── Home: Grid Select ───
 function renderGridSelect() {
-    const cont = document.getElementById('grid-select');
+    var cont = document.getElementById('grid-select');
     cont.innerHTML = '';
-    GRID_OPTIONS.forEach(opt => {
-        const card = document.createElement('div');
+    GRID_OPTIONS.forEach(function(opt) {
+        var card = document.createElement('div');
         card.className = 'grid-card' + (opt.size === selectedGrid ? ' selected' : '');
-        const cvs = document.createElement('canvas');
+        var cvs = document.createElement('canvas');
         cvs.width = 128; cvs.height = 128;
         card.appendChild(cvs);
-        const sp = document.createElement('span');
+        var sp = document.createElement('span');
         sp.className = 'g-name';
         sp.textContent = opt.label;
         card.appendChild(sp);
-        card.onclick = () => {
+        card.onclick = function() {
             selectedGrid = opt.size;
             selectedDots = DOT_COUNTS[selectedGrid][0];
             renderGridSelect();
@@ -502,12 +507,12 @@ function renderGridSelect() {
     });
 }
 function drawMiniGrid(cvs, size) {
-    const ctx = cvs.getContext('2d');
-    const pad = 24, w = cvs.width, h = cvs.height;
-    const step = (w - 2 * pad) / (size - 1);
+    var ctx = cvs.getContext('2d');
+    var pad = 24, w = cvs.width, h = cvs.height;
+    var step = (w - 2 * pad) / (size - 1);
     ctx.clearRect(0, 0, w, h);
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
+    for (var r = 0; r < size; r++) {
+        for (var c = 0; c < size; c++) {
             ctx.beginPath();
             ctx.arc(pad + c * step, pad + r * step, 5, 0, Math.PI * 2);
             ctx.fillStyle = '#B8AD9E';
@@ -518,13 +523,26 @@ function drawMiniGrid(cvs, size) {
 
 // ─── Home: Dots Select ───
 function renderDotsSelect() {
-    const cont = document.getElementById('dots-select');
+    var cont = document.getElementById('dots-select');
     cont.innerHTML = '';
-    DOT_COUNTS[selectedGrid].forEach(n => {
-        const btn = document.createElement('button');
+    DOT_COUNTS[selectedGrid].forEach(function(n) {
+        var btn = document.createElement('button');
         btn.className = 'seg-btn' + (n === selectedDots ? ' sel-green' : '');
-        btn.textContent = n + '개 점 (' + (n-1) + '선)';
-        btn.onclick = () => { selectedDots = n; renderDotsSelect(); };
+        btn.textContent = n + '\uAC1C \uC810 (' + (n-1) + '\uC120)';
+        btn.onclick = function() { selectedDots = n; renderDotsSelect(); };
+        cont.appendChild(btn);
+    });
+}
+
+// ─── Home: Diagonal Select ───
+function renderDiagSelect() {
+    var cont = document.getElementById('diag-select');
+    cont.innerHTML = '';
+    [{val:false, label:'\uC0AC\uC120 \uC5C6\uC774'}, {val:true, label:'\uC0AC\uC120 \uD3EC\uD568'}].forEach(function(opt) {
+        var btn = document.createElement('button');
+        btn.className = 'seg-btn' + (allowDiagonal === opt.val ? ' sel-blue' : '');
+        btn.textContent = opt.label;
+        btn.onclick = function() { allowDiagonal = opt.val; renderDiagSelect(); };
         cont.appendChild(btn);
     });
 }
@@ -533,58 +551,82 @@ function renderDotsSelect() {
 function idx(r, c, size) { return r * size + c; }
 function rc(i, size) { return [Math.floor(i / size), i % size]; }
 
-function generatePuzzle(gridSize, dotCount) {
-    const total = gridSize * gridSize;
-    for (let attempt = 0; attempt < 300; attempt++) {
-        let visited = new Set();
-        let path = [];
-        let start = Math.floor(Math.random() * total);
-        visited.add(start);
+function isDiagonalEdge(a, b, gridSize) {
+    var ar = rc(a, gridSize), br = rc(b, gridSize);
+    return Math.abs(ar[0] - br[0]) === 1 && Math.abs(ar[1] - br[1]) === 1;
+}
+
+function getNeighbours(curr, gridSize, useDiag) {
+    var cr = rc(curr, gridSize);
+    var neighbours = [];
+    // 4-directional
+    var dirs4 = [[-1,0],[1,0],[0,-1],[0,1]];
+    var dirs8 = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+    var dirs = useDiag ? dirs8 : dirs4;
+    for (var i = 0; i < dirs.length; i++) {
+        var nr = cr[0] + dirs[i][0], nc = cr[1] + dirs[i][1];
+        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+            neighbours.push(idx(nr, nc, gridSize));
+        }
+    }
+    return neighbours;
+}
+
+function generatePuzzle(gridSize, dotCount, useDiag) {
+    var total = gridSize * gridSize;
+    for (var attempt = 0; attempt < 500; attempt++) {
+        var visited = {};
+        var path = [];
+        var start = Math.floor(Math.random() * total);
+        visited[start] = true;
         path.push(start);
         while (path.length < dotCount) {
-            const curr = path[path.length - 1];
-            const [cr, cc] = rc(curr, gridSize);
-            let neighbours = [];
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    if (dr === 0 && dc === 0) continue;
-                    const nr = cr + dr, nc = cc + dc;
-                    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-                        const ni = idx(nr, nc, gridSize);
-                        if (!visited.has(ni)) neighbours.push(ni);
-                    }
-                }
+            var curr = path[path.length - 1];
+            var allN = getNeighbours(curr, gridSize, useDiag);
+            var avail = [];
+            for (var i = 0; i < allN.length; i++) {
+                if (!visited[allN[i]]) avail.push(allN[i]);
             }
-            if (neighbours.length === 0) break;
-            const next = neighbours[Math.floor(Math.random() * neighbours.length)];
-            visited.add(next);
+            if (avail.length === 0) break;
+            var next = avail[Math.floor(Math.random() * avail.length)];
+            visited[next] = true;
             path.push(next);
         }
         if (path.length === dotCount) {
-            const edges = [];
-            for (let i = 0; i < path.length - 1; i++) edges.push([path[i], path[i+1]]);
-            return { dots: path, edges };
+            var edges = [];
+            for (var j = 0; j < path.length - 1; j++) edges.push([path[j], path[j+1]]);
+            // If no diagonal mode, verify no diagonal edges (should be guaranteed by generation)
+            if (!useDiag) {
+                var hasDiag = false;
+                for (var k = 0; k < edges.length; k++) {
+                    if (isDiagonalEdge(edges[k][0], edges[k][1], gridSize)) { hasDiag = true; break; }
+                }
+                if (hasDiag) continue;
+            }
+            return { dots: path, edges: edges };
         }
     }
-    const dots = []; for (let i = 0; i < dotCount; i++) dots.push(i);
-    const edges = []; for (let i = 0; i < dots.length - 1; i++) edges.push([dots[i], dots[i+1]]);
-    return { dots, edges };
+    // fallback
+    var dots = []; for (var f = 0; f < dotCount; f++) dots.push(f);
+    var edges2 = []; for (var g = 0; g < dots.length - 1; g++) edges2.push([dots[g], dots[g+1]]);
+    return { dots: dots, edges: edges2 };
 }
 
 // ─── Game ───
 function startGame() {
-    puzzle = generatePuzzle(selectedGrid, selectedDots);
+    puzzle = generatePuzzle(selectedGrid, selectedDots, allowDiagonal);
     questionEdges = puzzle.edges;
     answerEdges = [];
-    answerInProgress = null;
+    dragFrom = -1;
+    isDragging = false;
     showView('game-view');
 
-    document.getElementById('nav-title').textContent = selectedGrid + '×' + selectedGrid + ' 느린아이 점잇기';
-    document.getElementById('diff-badge').textContent = selectedDots + '개 점';
-    document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
+    document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' \uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30';
+    document.getElementById('diff-badge').textContent = selectedDots + '\uAC1C \uC810' + (allowDiagonal ? ' \u00b7 \uC0AC\uC120' : '');
+    document.getElementById('game-hint').textContent = '\uC810\uC5D0\uC11C \uB4DC\uB798\uADF8\uD558\uC5EC \uC120\uC744 \uADF8\uC73C\uC138\uC694';
     document.getElementById('btn-undo').style.display = 'none';
 
-    requestAnimationFrame(() => {
+    requestAnimationFrame(function() {
         setupCanvas('cv-question');
         setupCanvas('cv-answer');
         drawBoard('cv-question', questionEdges, true);
@@ -593,9 +635,9 @@ function startGame() {
 }
 
 function setupCanvas(id) {
-    const cvs = document.getElementById(id);
-    const rect = cvs.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    var cvs = document.getElementById(id);
+    var rect = cvs.parentElement.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
     cvs.width = rect.width * dpr;
     cvs.height = rect.height * dpr;
     cvs.style.width = rect.width + 'px';
@@ -604,62 +646,77 @@ function setupCanvas(id) {
 }
 
 function getDotPositions(canvasEl) {
-    const rect = canvasEl.getBoundingClientRect();
-    const w = rect.width, h = rect.height;
-    const pad = w * 0.15;
-    const size = selectedGrid;
-    const stepX = size > 1 ? (w - 2 * pad) / (size - 1) : 0;
-    const stepY = size > 1 ? (h - 2 * pad) / (size - 1) : 0;
-    const positions = [];
-    for (let r = 0; r < size; r++)
-        for (let c = 0; c < size; c++)
+    var rect = canvasEl.getBoundingClientRect();
+    var w = rect.width, h = rect.height;
+    var pad = w * 0.15;
+    var size = selectedGrid;
+    var stepX = size > 1 ? (w - 2 * pad) / (size - 1) : 0;
+    var stepY = size > 1 ? (h - 2 * pad) / (size - 1) : 0;
+    var positions = [];
+    for (var r = 0; r < size; r++)
+        for (var c = 0; c < size; c++)
             positions.push({ x: pad + c * stepX, y: pad + r * stepY });
     return positions;
 }
 
 function drawBoard(canvasId, edges, isQuestion) {
-    const cvs = document.getElementById(canvasId);
-    const ctx = cvs.getContext('2d');
-    const rect = cvs.parentElement.getBoundingClientRect();
-    const w = rect.width, h = rect.height;
+    var cvs = document.getElementById(canvasId);
+    var ctx = cvs.getContext('2d');
+    var rect = cvs.parentElement.getBoundingClientRect();
+    var w = rect.width, h = rect.height;
     ctx.clearRect(0, 0, w, h);
 
-    const positions = getDotPositions(cvs);
-    const dotRadius = Math.max(7, w * 0.04);
+    var positions = getDotPositions(cvs);
+    var dotRadius = Math.max(7, w * 0.04);
+    var lineW = Math.max(3, w * 0.018);
 
     // Draw edges
-    ctx.lineWidth = Math.max(3, w * 0.018);
+    ctx.lineWidth = lineW;
     ctx.lineCap = 'round';
-    edges.forEach(([a, b]) => {
-        const pa = positions[a], pb = positions[b];
+    for (var e = 0; e < edges.length; e++) {
+        var pa = positions[edges[e][0]], pb = positions[edges[e][1]];
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
         ctx.strokeStyle = isQuestion ? '#4A4035' : '#5BC886';
         ctx.stroke();
-    });
+    }
+
+    // Draw drag preview line
+    if (!isQuestion && isDragging && dragFrom >= 0) {
+        var pf = positions[dragFrom];
+        ctx.beginPath();
+        ctx.moveTo(pf.x, pf.y);
+        ctx.lineTo(dragCurX, dragCurY);
+        ctx.strokeStyle = 'rgba(91,200,134,0.45)';
+        ctx.lineWidth = lineW;
+        ctx.setLineDash([6, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
 
     // Draw dots
-    const total = selectedGrid * selectedGrid;
-    const puzzleDotSet = new Set(puzzle ? puzzle.dots : []);
-    const usedInEdges = new Set();
-    edges.forEach(([a, b]) => { usedInEdges.add(a); usedInEdges.add(b); });
+    var total = selectedGrid * selectedGrid;
+    var puzzleDotSet = {};
+    if (puzzle) for (var d = 0; d < puzzle.dots.length; d++) puzzleDotSet[puzzle.dots[d]] = true;
+    var usedInEdges = {};
+    for (var u = 0; u < edges.length; u++) { usedInEdges[edges[u][0]] = true; usedInEdges[edges[u][1]] = true; }
 
-    for (let i = 0; i < total; i++) {
-        const p = positions[i];
+    for (var i = 0; i < total; i++) {
+        var p = positions[i];
         ctx.beginPath();
         ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
         if (isQuestion) {
-            ctx.fillStyle = puzzleDotSet.has(i) ? '#4A4035' : '#D8D2CA';
+            ctx.fillStyle = puzzleDotSet[i] ? '#4A4035' : '#D8D2CA';
         } else {
-            if (usedInEdges.has(i)) ctx.fillStyle = '#5BC886';
-            else if (puzzleDotSet.has(i)) ctx.fillStyle = '#B8AD9E';
+            if (usedInEdges[i]) ctx.fillStyle = '#5BC886';
+            else if (puzzleDotSet[i]) ctx.fillStyle = '#B8AD9E';
             else ctx.fillStyle = '#D8D2CA';
         }
         ctx.fill();
 
-        // Highlight selected
-        if (!isQuestion && answerInProgress && answerInProgress.from === i) {
+        // Highlight drag-from dot
+        if (!isQuestion && isDragging && dragFrom === i) {
             ctx.beginPath();
             ctx.arc(p.x, p.y, dotRadius + 6, 0, Math.PI * 2);
             ctx.strokeStyle = '#F0A050';
@@ -669,67 +726,104 @@ function drawBoard(canvasId, edges, isQuestion) {
     }
 }
 
-// ─── Answer Interaction ───
+// ─── Drag-based Answer Interaction ───
 (function() {
-    const cvs = document.getElementById('cv-answer');
-    function getClickedDot(e) {
-        const rect = cvs.getBoundingClientRect();
-        let cx, cy;
-        if (e.changedTouches) {
-            cx = e.changedTouches[0].clientX - rect.left;
-            cy = e.changedTouches[0].clientY - rect.top;
-        } else {
-            cx = e.clientX - rect.left;
-            cy = e.clientY - rect.top;
-        }
-        const positions = getDotPositions(cvs);
-        const hitRadius = Math.max(24, rect.width * 0.1);
-        let best = -1, bestDist = Infinity;
-        for (let i = 0; i < positions.length; i++) {
+    var cvs = document.getElementById('cv-answer');
+
+    function getNearestDot(cx, cy) {
+        var positions = getDotPositions(cvs);
+        var hitRadius = Math.max(24, cvs.getBoundingClientRect().width * 0.12);
+        var best = -1, bestDist = Infinity;
+        for (var i = 0; i < positions.length; i++) {
             if (!puzzle || !puzzle.dots.includes(i)) continue;
-            const p = positions[i];
-            const dist = Math.sqrt((cx - p.x) ** 2 + (cy - p.y) ** 2);
+            var dx = cx - positions[i].x, dy = cy - positions[i].y;
+            var dist = Math.sqrt(dx*dx + dy*dy);
             if (dist < hitRadius && dist < bestDist) { best = i; bestDist = dist; }
         }
         return best;
     }
 
-    function handleTap(e) {
+    function getPos(e) {
+        var rect = cvs.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        }
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            return { x: e.changedTouches[0].clientX - rect.left, y: e.changedTouches[0].clientY - rect.top };
+        }
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function onStart(e) {
         e.preventDefault();
         if (!puzzle) return;
-        const dotIdx = getClickedDot(e);
-        if (dotIdx < 0) {
-            if (answerInProgress) { answerInProgress = null; drawBoard('cv-answer', answerEdges, false); }
-            return;
-        }
-        if (!answerInProgress) {
-            answerInProgress = { from: dotIdx };
-            document.getElementById('game-hint').textContent = '다음 점을 눌러 선을 이으세요';
-        } else {
-            const from = answerInProgress.from;
-            const to = dotIdx;
-            answerInProgress = null;
-            if (from !== to) {
-                const exists = answerEdges.some(([a,b]) => (a===from&&b===to)||(a===to&&b===from));
-                if (!exists) {
-                    answerEdges.push([from, to]);
-                    document.getElementById('btn-undo').style.display = '';
-                }
+        var pos = getPos(e);
+        var dot = getNearestDot(pos.x, pos.y);
+        if (dot < 0) return;
+        dragFrom = dot;
+        dragCurX = pos.x;
+        dragCurY = pos.y;
+        isDragging = true;
+        document.getElementById('game-hint').textContent = '\uB4DC\uB798\uADF8\uD558\uC5EC \uB2E4\uC74C \uC810\uC5D0 \uB193\uC73C\uC138\uC694';
+        drawBoard('cv-answer', answerEdges, false);
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        var pos = getPos(e);
+        dragCurX = pos.x;
+        dragCurY = pos.y;
+        drawBoard('cv-answer', answerEdges, false);
+    }
+
+    function onEnd(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        var pos = getPos(e);
+        var dot = getNearestDot(pos.x, pos.y);
+        if (dot >= 0 && dot !== dragFrom) {
+            var exists = false;
+            for (var i = 0; i < answerEdges.length; i++) {
+                var a = answerEdges[i][0], b = answerEdges[i][1];
+                if ((a === dragFrom && b === dot) || (a === dot && b === dragFrom)) { exists = true; break; }
             }
-            document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
+            if (!exists) {
+                answerEdges.push([dragFrom, dot]);
+                document.getElementById('btn-undo').style.display = '';
+            }
         }
+        dragFrom = -1;
+        isDragging = false;
+        document.getElementById('game-hint').textContent = '\uC810\uC5D0\uC11C \uB4DC\uB798\uADF8\uD558\uC5EC \uC120\uC744 \uADF8\uC73C\uC138\uC694';
         drawBoard('cv-answer', answerEdges, false);
         checkAnswer();
     }
 
-    cvs.addEventListener('click', handleTap);
-    cvs.addEventListener('touchend', handleTap);
+    // Touch events
+    cvs.addEventListener('touchstart', onStart, { passive: false });
+    cvs.addEventListener('touchmove', onMove, { passive: false });
+    cvs.addEventListener('touchend', onEnd, { passive: false });
+    cvs.addEventListener('touchcancel', function() {
+        dragFrom = -1; isDragging = false;
+        drawBoard('cv-answer', answerEdges, false);
+    });
+
+    // Mouse events
+    cvs.addEventListener('mousedown', onStart);
+    cvs.addEventListener('mousemove', onMove);
+    cvs.addEventListener('mouseup', onEnd);
+    cvs.addEventListener('mouseleave', function() {
+        if (isDragging) {
+            dragFrom = -1; isDragging = false;
+            drawBoard('cv-answer', answerEdges, false);
+        }
+    });
 })();
 
 function undoLine() {
     if (answerEdges.length > 0) {
         answerEdges.pop();
-        answerInProgress = null;
         drawBoard('cv-answer', answerEdges, false);
         if (answerEdges.length === 0) document.getElementById('btn-undo').style.display = 'none';
     }
@@ -739,10 +833,12 @@ function edgeKey(a, b) { return a < b ? a + '-' + b : b + '-' + a; }
 
 function checkAnswer() {
     if (answerEdges.length < questionEdges.length) return;
-    const qSet = new Set(questionEdges.map(([a,b]) => edgeKey(a,b)));
-    const aSet = new Set(answerEdges.map(([a,b]) => edgeKey(a,b)));
-    let correct = 0;
-    qSet.forEach(k => { if (aSet.has(k)) correct++; });
+    var qSet = {};
+    for (var i = 0; i < questionEdges.length; i++) qSet[edgeKey(questionEdges[i][0], questionEdges[i][1])] = true;
+    var correct = 0;
+    for (var j = 0; j < answerEdges.length; j++) {
+        if (qSet[edgeKey(answerEdges[j][0], answerEdges[j][1])]) correct++;
+    }
     if (answerEdges.length === questionEdges.length) {
         if (correct === questionEdges.length) { streak++; showResult(true); }
         else { streak = 0; showResult(false); }
@@ -751,36 +847,34 @@ function checkAnswer() {
 
 function showResult(success) {
     document.getElementById('result-overlay').classList.add('active');
-    document.getElementById('result-emoji').textContent = success ? '🎉' : '😅';
-    document.getElementById('result-text').textContent = success ? '정답!' : '오답!';
+    document.getElementById('result-emoji').textContent = success ? '\uD83C\uDF89' : '\uD83D\uDE05';
+    document.getElementById('result-text').textContent = success ? '\uC815\uB2F5!' : '\uC624\uB2F5!';
     document.getElementById('result-sub').textContent = success
-        ? '연속 ' + streak + '문제 정답!'
-        : '선의 위치가 달라요. 다시 도전하세요!';
+        ? '\uC5F0\uC18D ' + streak + '\uBB38\uC81C \uC815\uB2F5!'
+        : '\uC120\uC758 \uC704\uCE58\uAC00 \uB2EC\uB77C\uC694. \uB2E4\uC2DC \uB3C4\uC804\uD558\uC138\uC694!';
 }
 function closeResult() { document.getElementById('result-overlay').classList.remove('active'); }
 function retryGame() {
     closeResult();
     answerEdges = [];
-    answerInProgress = null;
+    dragFrom = -1; isDragging = false;
     document.getElementById('btn-undo').style.display = 'none';
     drawBoard('cv-answer', answerEdges, false);
-    document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
+    document.getElementById('game-hint').textContent = '\uC810\uC5D0\uC11C \uB4DC\uB798\uADF8\uD558\uC5EC \uC120\uC744 \uADF8\uC73C\uC138\uC694';
 }
 function nextGame() { closeResult(); startGame(); }
 
 // ─── Share ───
 function shareApp() {
-    const title = document.title;
-    const url = window.location.href;
-    const text = title + ' - 보고 따라 점을 이어 보세요!';
+    var title = document.title;
+    var url = window.location.href;
+    var text = title + ' - \uBCF4\uACE0 \uB530\uB77C \uC810\uC744 \uC774\uC5B4 \uBCF4\uC138\uC694!';
     if (navigator.share) {
         navigator.share({ title: title, text: text, url: url }).catch(function(){});
+    } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() { showToast('\uB9C1\uD06C\uAC00 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!'); });
     } else {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(url).then(function() { showToast('링크가 복사되었습니다!'); });
-        } else {
-            prompt('링크를 복사하세요:', url);
-        }
+        prompt('\uB9C1\uD06C\uB97C \uBCF5\uC0AC\uD558\uC138\uC694:', url);
     }
 }
 function openShare() { document.getElementById('share-overlay').classList.add('active'); }
@@ -789,33 +883,33 @@ function closeShare(e) {
     document.getElementById('share-overlay').classList.remove('active');
 }
 function showToast(msg) {
-    const t = document.getElementById('toast');
+    var t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
+    setTimeout(function() { t.classList.remove('show'); }, 2000);
 }
 function copyLink() {
-    const text = '느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/slowmath_dot2dot/';
+    var text = '\uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30 ' + selectedGrid + '\u00d7' + selectedGrid + ' - \uC5F0\uC18D ' + streak + '\uBB38\uC81C \uC815\uB2F5!\nhttps://sprit6487.github.io/slowmath_dot2dot/';
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => showToast('링크가 복사되었습니다'));
-    } else { showToast('복사 실패'); }
+        navigator.clipboard.writeText(text).then(function() { showToast('\uB9C1\uD06C\uAC00 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4'); });
+    } else { showToast('\uBCF5\uC0AC \uC2E4\uD328'); }
     closeShare();
 }
 function shareKakao() {
-    const text = encodeURIComponent('느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/slowmath_dot2dot/');
+    var text = encodeURIComponent('\uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30 ' + selectedGrid + '\u00d7' + selectedGrid + ' - \uC5F0\uC18D ' + streak + '\uBB38\uC81C \uC815\uB2F5!\nhttps://sprit6487.github.io/slowmath_dot2dot/');
     window.open('https://story.kakao.com/share?url=' + encodeURIComponent('https://sprit6487.github.io/slowmath_dot2dot/') + '&text=' + text, '_blank');
     closeShare();
 }
 function shareTwitter() {
-    const text = encodeURIComponent('느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!');
+    var text = encodeURIComponent('\uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30 ' + selectedGrid + '\u00d7' + selectedGrid + ' - \uC5F0\uC18D ' + streak + '\uBB38\uC81C \uC815\uB2F5!');
     window.open('https://twitter.com/intent/tweet?text=' + text + '&url=' + encodeURIComponent('https://sprit6487.github.io/slowmath_dot2dot/'), '_blank');
     closeShare();
 }
 function shareNative() {
     if (navigator.share) {
         navigator.share({
-            title: '느린아이 점잇기',
-            text: '느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!',
+            title: '\uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30',
+            text: '\uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30 ' + selectedGrid + '\u00d7' + selectedGrid + ' - \uC5F0\uC18D ' + streak + '\uBB38\uC81C \uC815\uB2F5!',
             url: 'https://sprit6487.github.io/slowmath_dot2dot/'
         });
     } else { copyLink(); }
@@ -825,6 +919,7 @@ function shareNative() {
 // ─── Init ───
 renderGridSelect();
 renderDotsSelect();
+renderDiagSelect();
 </script>
 </body>
 </html>
