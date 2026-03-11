@@ -757,7 +757,6 @@ function drawAnswerBoard() {
         ctx.beginPath();
         ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
         if (usedInEdges[i]) ctx.fillStyle = '#5BC886';
-        else if (puzzleDotSet[i]) ctx.fillStyle = '#B8AD9E';
         else ctx.fillStyle = '#D8D2CA';
         ctx.fill();
     }
