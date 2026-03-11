@@ -16,7 +16,7 @@
         user-select: none;
     }
     .app {
-        width: 100%; max-width: 480px;
+        width: 100%; max-width: 100%;
         min-height: 100dvh;
         background: white;
         padding: 24px 20px;
@@ -24,17 +24,19 @@
         padding-bottom: max(24px, env(safe-area-inset-bottom));
         display: flex; flex-direction: column;
     }
+    /* 태블릿 */
     @media (min-width: 768px) {
         body { align-items: center; padding: 32px; }
         .app {
-            max-width: 640px; min-height: auto;
+            max-width: 680px; min-height: auto;
             border-radius: 32px;
             box-shadow: 0 8px 48px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
             padding: 44px 40px;
         }
     }
+    /* 대형 태블릿 / 데스크톱 */
     @media (min-width: 1024px) {
-        .app { max-width: 720px; padding: 52px 56px; }
+        .app { max-width: 780px; padding: 52px 56px; }
     }
     .hidden { display: none !important; }
 
@@ -165,8 +167,8 @@
     .badge { font-size: .75rem; font-weight: 600; color: #8C8070; background: #F5F1EB; border-radius: 8px; padding: 4px 10px; }
 
     /* ── Game boards ── */
-    .game-boards { width: 100%; display: flex; gap: 14px; justify-content: center; margin-bottom: 14px; }
-    .board-wrapper { flex: 1; max-width: 260px; text-align: center; }
+    .game-boards { width: 100%; display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+    .board-wrapper { flex: 1; max-width: 46vw; text-align: center; }
     .board-label { font-size: .78rem; font-weight: 700; color: #B8AD9E; margin-bottom: 8px; }
     .board-container {
         width: 100%; aspect-ratio: 1;
@@ -175,9 +177,19 @@
     }
     .board-container canvas { width: 100%; height: 100%; display: block; touch-action: none; }
     @media (min-width: 768px) {
-        .game-boards { gap: 24px; }
-        .board-wrapper { max-width: 300px; }
+        .game-boards { gap: 28px; }
+        .board-wrapper { max-width: 280px; }
         .board-label { font-size: .85rem; }
+    }
+    @media (min-width: 1024px) {
+        .game-boards { gap: 36px; }
+        .board-wrapper { max-width: 320px; }
+    }
+    /* 세로가 짧은 화면(가로 모드) 대응 */
+    @media (max-height: 600px) {
+        .board-wrapper { max-width: 35vh; }
+        .game-nav { margin-bottom: 8px; }
+        .game-hint { font-size: .78rem; }
     }
     .game-hint { font-size: .875rem; font-weight: 600; color: #B8AD9E; text-align: center; min-height: 22px; }
 
