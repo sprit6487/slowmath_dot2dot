@@ -193,15 +193,15 @@
     }
     .game-hint { font-size: .875rem; font-weight: 600; color: #B8AD9E; text-align: center; min-height: 22px; }
 
-    /* ── Undo button ── */
-    .btn-undo {
+    /* ── Clear button ── */
+    .btn-clear {
         margin-top: 8px; padding: 10px 28px;
         border: 2px solid #E8E2DA; border-radius: 12px;
         background: white; font-family: 'Noto Sans KR', sans-serif;
         font-size: .85rem; font-weight: 700; color: #8C8070;
         cursor: pointer; transition: all .15s;
     }
-    .btn-undo:active { transform: scale(.97); background: #F5F1EB; }
+    .btn-clear:active { transform: scale(.97); background: #F5F1EB; }
 
     /* ── Result overlay ── */
     .result-overlay {
@@ -402,10 +402,9 @@
                 <div class="board-container"><canvas id="cv-answer"></canvas></div>
             </div>
         </div>
-        <p class="game-hint" id="game-hint">손가락으로 점과 점 사이에 선을 그으세요</p>
+        <p class="game-hint" id="game-hint">점과 점 사이에 선을 그으세요</p>
         <div style="display:flex; justify-content:center; gap:10px; margin-top:4px;">
-            <button class="btn-undo" id="btn-undo" onclick="undoLine()" style="display:none;">↩ 되돌리기</button>
-            <button class="btn-undo" id="btn-clear" onclick="clearAll()" style="display:none;">✕ 전체 지우기</button>
+            <button class="btn-clear" id="btn-clear" onclick="clearAll()" style="display:none;">✕ 전체 지우기</button>
         </div>
     </div>
 
@@ -633,8 +632,7 @@ function startGame() {
 
     document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' \uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30';
     document.getElementById('diff-badge').textContent = selectedDots + '\uAC1C \uC810' + (allowDiagonal ? ' \u00b7 \uC0AC\uC120' : '');
-    document.getElementById('game-hint').textContent = '\uC190\uAC00\uB77D\uC73C\uB85C \uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
-    document.getElementById('btn-undo').style.display = 'none';
+    document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
     document.getElementById('btn-clear').style.display = 'none';
 
     requestAnimationFrame(function() {
@@ -766,21 +764,9 @@ function drawAnswerBoard() {
 }
 
 // ─── Free-draw Answer Interaction ───
+// 선이 지나간 점들을 순서대로 감지하여 연속된 점 쌍을 edge로 등록
 (function() {
     var cvs = document.getElementById('cv-answer');
-
-    function getNearestPuzzleDot(cx, cy) {
-        var positions = getDotPositions(cvs);
-        var hitRadius = Math.max(28, cvs.getBoundingClientRect().width * 0.14);
-        var best = -1, bestDist = Infinity;
-        for (var i = 0; i < positions.length; i++) {
-            if (!puzzle || !puzzle.dots.includes(i)) continue;
-            var dx = cx - positions[i].x, dy = cy - positions[i].y;
-            var dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < hitRadius && dist < bestDist) { best = i; bestDist = dist; }
-        }
-        return best;
-    }
 
     function getPos(e) {
         var rect = cvs.getBoundingClientRect();
@@ -791,6 +777,33 @@ function drawAnswerBoard() {
             return { x: e.changedTouches[0].clientX - rect.left, y: e.changedTouches[0].clientY - rect.top };
         }
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    // 그려진 경로를 분석하여 지나간 점 목록을 순서대로 반환
+    function detectPassedDots(points) {
+        if (!puzzle || points.length < 2) return [];
+        var positions = getDotPositions(cvs);
+        var hitRadius = Math.max(20, cvs.getBoundingClientRect().width * 0.12);
+        var passed = []; // 순서대로 지나간 dot index 목록
+
+        for (var p = 0; p < points.length; p++) {
+            var px = points[p].x, py = points[p].y;
+            // 모든 퍼즐 점에 대해 거리 체크
+            for (var d = 0; d < puzzle.dots.length; d++) {
+                var di = puzzle.dots[d];
+                var dp = positions[di];
+                var dx = px - dp.x, dy = py - dp.y;
+                var dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < hitRadius) {
+                    // 이전에 지나간 점과 다를 때만 추가 (연속 중복 제거)
+                    if (passed.length === 0 || passed[passed.length - 1] !== di) {
+                        passed.push(di);
+                    }
+                    break; // 한 포인트에서 가장 먼저 매칭된 점만
+                }
+            }
+        }
+        return passed;
     }
 
     function onStart(e) {
@@ -815,27 +828,30 @@ function drawAnswerBoard() {
         e.preventDefault();
         isDrawing = false;
 
-        // Analyze the stroke: find nearest puzzle dot to start and end
-        if (drawingPoints.length >= 2) {
-            var startPt = drawingPoints[0];
-            var endPt = drawingPoints[drawingPoints.length - 1];
-            var dotA = getNearestPuzzleDot(startPt.x, startPt.y);
-            var dotB = getNearestPuzzleDot(endPt.x, endPt.y);
+        // 선이 지나간 점들을 순서대로 감지
+        var passedDots = detectPassedDots(drawingPoints);
+        var newEdgeCount = 0;
 
-            if (dotA >= 0 && dotB >= 0 && dotA !== dotB) {
-                // Check not already exists
-                var exists = false;
-                for (var i = 0; i < answerEdges.length; i++) {
-                    var a = answerEdges[i][0], b = answerEdges[i][1];
-                    if ((a === dotA && b === dotB) || (a === dotB && b === dotA)) { exists = true; break; }
-                }
-                if (!exists) {
-                    answerEdges.push([dotA, dotB]);
-                    allStrokes.push(drawingPoints.slice());
-                    document.getElementById('btn-undo').style.display = '';
-                    document.getElementById('btn-clear').style.display = '';
-                }
+        // 연속된 점 쌍을 edge로 등록
+        for (var i = 0; i < passedDots.length - 1; i++) {
+            var dotA = passedDots[i];
+            var dotB = passedDots[i + 1];
+            // 중복 체크
+            var exists = false;
+            for (var j = 0; j < answerEdges.length; j++) {
+                var a = answerEdges[j][0], b = answerEdges[j][1];
+                if ((a === dotA && b === dotB) || (a === dotB && b === dotA)) { exists = true; break; }
             }
+            if (!exists) {
+                answerEdges.push([dotA, dotB]);
+                newEdgeCount++;
+            }
+        }
+
+        if (newEdgeCount > 0) {
+            allStrokes.push(drawingPoints.slice());
+            strokeEdgeCounts.push(newEdgeCount);
+            document.getElementById('btn-clear').style.display = '';
         }
 
         drawingPoints = [];
@@ -859,25 +875,14 @@ function drawAnswerBoard() {
     cvs.addEventListener('mouseleave', function() { if (isDrawing) onCancel(); });
 })();
 
-function undoLine() {
-    if (answerEdges.length > 0) {
-        answerEdges.pop();
-        allStrokes.pop();
-        drawAnswerBoard();
-        if (answerEdges.length === 0) {
-            document.getElementById('btn-undo').style.display = 'none';
-            document.getElementById('btn-clear').style.display = 'none';
-        }
-    }
-}
+var strokeEdgeCounts = [];
 
 function clearAll() {
     answerEdges = [];
     allStrokes = [];
     drawAnswerBoard();
-    document.getElementById('btn-undo').style.display = 'none';
     document.getElementById('btn-clear').style.display = 'none';
-    document.getElementById('game-hint').textContent = '\uC190\uAC00\uB77D\uC73C\uB85C \uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
+    document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
 }
 
 function edgeKey(a, b) { return a < b ? a + '-' + b : b + '-' + a; }
@@ -915,10 +920,9 @@ function retryGame() {
     allStrokes = [];
     isDrawing = false;
     drawingPoints = [];
-    document.getElementById('btn-undo').style.display = 'none';
     document.getElementById('btn-clear').style.display = 'none';
     drawAnswerBoard();
-    document.getElementById('game-hint').textContent = '\uC190\uAC00\uB77D\uC73C\uB85C \uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
+    document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
 }
 function nextGame() { closeResult(); startGame(); }
 
