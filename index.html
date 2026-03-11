@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>점잇기 - Dot to Dot</title>
+<title>느린아이 점잇기</title>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap');
     *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -306,7 +306,7 @@
                     <path d="M94 46 Q98 50 103 46" fill="none" stroke="#3A9B6A" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
             </div>
-            <h1><span style="color:#6BADE8;">점</span><span style="color:#F0A050;">잇</span><span style="color:#4A4035;">기</span></h1>
+            <h1><span style="color:#6BADE8;">느린</span><span style="color:#F0A050;">아이</span> <span style="color:#4A4035;">점잇기</span></h1>
             <p class="login-subtitle">보고 따라 점을 이어 보세요!</p>
         </div>
         <div class="login-buttons">
@@ -357,7 +357,7 @@
                 <circle cx="100" cy="44" r="3.5" fill="#F0A050" opacity=".4"/>
                 <path d="M94 46 Q98 50 103 46" fill="none" stroke="#3A9B6A" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-            <h1><span style="color:#6BADE8;">점</span><span style="color:#F0A050;">잇</span><span style="color:#4A4035;">기</span></h1>
+            <h1><span style="color:#6BADE8;">느린</span><span style="color:#F0A050;">아이</span> <span style="color:#4A4035;">점잇기</span></h1>
         </div>
 
         <p class="sec-label">격자 크기</p>
@@ -579,7 +579,7 @@ function startGame() {
     answerInProgress = null;
     showView('game-view');
 
-    document.getElementById('nav-title').textContent = selectedGrid + '×' + selectedGrid + ' 점잇기';
+    document.getElementById('nav-title').textContent = selectedGrid + '×' + selectedGrid + ' 느린아이 점잇기';
     document.getElementById('diff-badge').textContent = selectedDots + '개 점';
     document.getElementById('game-hint').textContent = '점을 눌러 선을 그으세요';
     document.getElementById('btn-undo').style.display = 'none';
@@ -795,28 +795,28 @@ function showToast(msg) {
     setTimeout(() => t.classList.remove('show'), 2000);
 }
 function copyLink() {
-    const text = '점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/dot2dot/';
+    const text = '느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/slowmath_dot2dot/';
     if (navigator.clipboard) {
         navigator.clipboard.writeText(text).then(() => showToast('링크가 복사되었습니다'));
     } else { showToast('복사 실패'); }
     closeShare();
 }
 function shareKakao() {
-    const text = encodeURIComponent('점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/dot2dot/');
-    window.open('https://story.kakao.com/share?url=' + encodeURIComponent('https://sprit6487.github.io/dot2dot/') + '&text=' + text, '_blank');
+    const text = encodeURIComponent('느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!\nhttps://sprit6487.github.io/slowmath_dot2dot/');
+    window.open('https://story.kakao.com/share?url=' + encodeURIComponent('https://sprit6487.github.io/slowmath_dot2dot/') + '&text=' + text, '_blank');
     closeShare();
 }
 function shareTwitter() {
-    const text = encodeURIComponent('점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!');
-    window.open('https://twitter.com/intent/tweet?text=' + text + '&url=' + encodeURIComponent('https://sprit6487.github.io/dot2dot/'), '_blank');
+    const text = encodeURIComponent('느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!');
+    window.open('https://twitter.com/intent/tweet?text=' + text + '&url=' + encodeURIComponent('https://sprit6487.github.io/slowmath_dot2dot/'), '_blank');
     closeShare();
 }
 function shareNative() {
     if (navigator.share) {
         navigator.share({
-            title: '점잇기',
-            text: '점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!',
-            url: 'https://sprit6487.github.io/dot2dot/'
+            title: '느린아이 점잇기',
+            text: '느린아이 점잇기 ' + selectedGrid + '×' + selectedGrid + ' - 연속 ' + streak + '문제 정답!',
+            url: 'https://sprit6487.github.io/slowmath_dot2dot/'
         });
     } else { copyLink(); }
     closeShare();
