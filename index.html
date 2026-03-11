@@ -467,12 +467,11 @@ var isDrawing = false;
 var allStrokes = [];       // saved freehand strokes for display
 
 var GRID_OPTIONS = [
-    { size: 2, label: '2\u00d72' },
     { size: 3, label: '3\u00d73' },
     { size: 4, label: '4\u00d74' },
     { size: 5, label: '5\u00d75' },
 ];
-var DOT_COUNTS = { 2: [2,3], 3: [3,4], 4: [4,5], 5: [5,6] };
+var DOT_COUNTS = { 3: [3,4,5], 4: [5,6,7], 5: [7,8,9] };
 
 // ─── Navigation ───
 function showView(id) {
