@@ -614,14 +614,33 @@ function countTurns(path, gridSize) {
 
 function generatePuzzle(gridSize, dotCount, useDiag, turnLimit) {
     var total = gridSize * gridSize;
-    for (var attempt = 0; attempt < 500; attempt++) {
+    // 방향 전환 제한이 있을 때: 직선 구간을 이어붙여 구성적으로 생성
+    if (turnLimit >= 0) {
+        for (var attempt = 0; attempt < 1000; attempt++) {
+            var path = buildTurnLimitedPath(gridSize, dotCount, useDiag, turnLimit);
+            if (path && path.length === dotCount) {
+                var edges = [];
+                for (var j = 0; j < path.length - 1; j++) edges.push([path[j], path[j+1]]);
+                if (!useDiag) {
+                    var hasDiag = false;
+                    for (var k = 0; k < edges.length; k++) {
+                        if (isDiagonalEdge(edges[k][0], edges[k][1], gridSize)) { hasDiag = true; break; }
+                    }
+                    if (hasDiag) continue;
+                }
+                return { dots: path, edges: edges };
+            }
+        }
+    }
+    // 제한 없음 또는 일반 생성
+    for (var attempt2 = 0; attempt2 < 500; attempt2++) {
         var visited = {};
-        var path = [];
+        var path2 = [];
         var start = Math.floor(Math.random() * total);
         visited[start] = true;
-        path.push(start);
-        while (path.length < dotCount) {
-            var curr = path[path.length - 1];
+        path2.push(start);
+        while (path2.length < dotCount) {
+            var curr = path2[path2.length - 1];
             var allN = getNeighbours(curr, gridSize, useDiag);
             var avail = [];
             for (var i = 0; i < allN.length; i++) {
@@ -630,25 +649,97 @@ function generatePuzzle(gridSize, dotCount, useDiag, turnLimit) {
             if (avail.length === 0) break;
             var next = avail[Math.floor(Math.random() * avail.length)];
             visited[next] = true;
-            path.push(next);
+            path2.push(next);
         }
-        if (path.length === dotCount) {
-            var edges = [];
-            for (var j = 0; j < path.length - 1; j++) edges.push([path[j], path[j+1]]);
+        if (path2.length === dotCount) {
+            var edges3 = [];
+            for (var j2 = 0; j2 < path2.length - 1; j2++) edges3.push([path2[j2], path2[j2+1]]);
             if (!useDiag) {
-                var hasDiag = false;
-                for (var k = 0; k < edges.length; k++) {
-                    if (isDiagonalEdge(edges[k][0], edges[k][1], gridSize)) { hasDiag = true; break; }
+                var hasDiag2 = false;
+                for (var k2 = 0; k2 < edges3.length; k2++) {
+                    if (isDiagonalEdge(edges3[k2][0], edges3[k2][1], gridSize)) { hasDiag2 = true; break; }
                 }
-                if (hasDiag) continue;
+                if (hasDiag2) continue;
             }
-            if (turnLimit >= 0 && countTurns(path, gridSize) > turnLimit) continue;
-            return { dots: path, edges: edges };
+            return { dots: path2, edges: edges3 };
         }
     }
-    var dots = []; for (var f = 0; f < dotCount; f++) dots.push(f);
-    var edges2 = []; for (var g = 0; g < dots.length - 1; g++) edges2.push([dots[g], dots[g+1]]);
-    return { dots: dots, edges: edges2 };
+    // 최종 fallback: 첫 행을 따라 직선 경로
+    var fbPath = [];
+    for (var f = 0; f < dotCount && f < total; f++) fbPath.push(f);
+    var fbEdges = [];
+    for (var g = 0; g < fbPath.length - 1; g++) fbEdges.push([fbPath[g], fbPath[g+1]]);
+    return { dots: fbPath, edges: fbEdges };
+}
+
+// 방향 전환 제한 경로 생성: 직선 구간을 이어붙이는 방식
+function buildTurnLimitedPath(gridSize, dotCount, useDiag, turnLimit) {
+    var dirs4 = [[-1,0],[1,0],[0,-1],[0,1]];
+    var dirs8 = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+    var dirs = useDiag ? dirs8 : dirs4;
+    // 랜덤 시작점
+    var startR = Math.floor(Math.random() * gridSize);
+    var startC = Math.floor(Math.random() * gridSize);
+    var path = [idx(startR, startC, gridSize)];
+    var visited = {};
+    visited[path[0]] = true;
+    var turnsUsed = 0;
+    // 첫 방향 랜덤 선택
+    var shuffledDirs = dirs.slice();
+    shuffle(shuffledDirs);
+    for (var d = 0; d < shuffledDirs.length; d++) {
+        var result = extendInDirection(path, visited, shuffledDirs[d], gridSize, dotCount, turnLimit, turnsUsed, dirs);
+        if (result) return result;
+    }
+    return null;
+}
+
+function extendInDirection(path, visited, dir, gridSize, dotCount, turnLimit, turnsUsed, allDirs) {
+    // 현재 방향으로 최대한 직선 연장
+    var extended = false;
+    while (path.length < dotCount) {
+        var last = path[path.length - 1];
+        var lr = rc(last, gridSize);
+        var nr = lr[0] + dir[0], nc = lr[1] + dir[1];
+        if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) break;
+        var ni = idx(nr, nc, gridSize);
+        if (visited[ni]) break;
+        visited[ni] = true;
+        path.push(ni);
+        extended = true;
+    }
+    if (path.length === dotCount) return path;
+    if (!extended) return null;
+    // 방향 전환이 필요
+    if (turnsUsed >= turnLimit) return null;
+    // 다른 방향으로 전환 시도
+    var shuffled = allDirs.slice();
+    shuffle(shuffled);
+    for (var d = 0; d < shuffled.length; d++) {
+        // 같은 방향이나 정반대 방향은 건너뜀
+        if (shuffled[d][0] === dir[0] && shuffled[d][1] === dir[1]) continue;
+        if (shuffled[d][0] === -dir[0] && shuffled[d][1] === -dir[1]) continue;
+        // 상태 복사 후 재귀 시도
+        var savedLen = path.length;
+        var savedVisited = {};
+        for (var key in visited) savedVisited[key] = true;
+        var result = extendInDirection(path, visited, shuffled[d], gridSize, dotCount, turnLimit, turnsUsed + 1, allDirs);
+        if (result) return result;
+        // 복원
+        while (path.length > savedLen) {
+            var removed = path.pop();
+            delete visited[removed];
+        }
+        for (var key2 in savedVisited) visited[key2] = true;
+    }
+    return null;
+}
+
+function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
 }
 
 // ─── Game ───
