@@ -340,7 +340,7 @@
         <p class="sec-label">사선(대각선)</p>
         <div class="row-btns" id="diag-select"></div>
 
-        <button class="start-btn" onclick="currentProblem=0; streak=0; startGame()">시작하기</button>
+        <button class="start-btn" onclick="currentProblem=0; streak=0; correctCount=0; startGame()">시작하기</button>
 
         <div style="text-align:center; margin-top:24px;">
             <button class="logout-btn" onclick="goLogin()">로그아웃</button>
@@ -400,6 +400,7 @@ var answerEdges = [];
 var streak = 0;
 var puzzle = null;
 var currentProblem = 0;
+var correctCount = 0;
 var TOTAL_PROBLEMS = 10;
 
 // Free-draw state
@@ -968,7 +969,7 @@ function checkAnswer() {
         if (qSet[edgeKey(answerEdges[j][0], answerEdges[j][1])]) correct++;
     }
     if (answerEdges.length === questionEdges.length) {
-        if (correct === questionEdges.length) { streak++; showResult(true); }
+        if (correct === questionEdges.length) { streak++; correctCount++; showResult(true); }
         else { streak = 0; showResult(false); }
     }
 }
@@ -983,7 +984,7 @@ function showResult(success) {
     document.getElementById('result-emoji').textContent = success ? '🎉' : '😅';
     document.getElementById('result-text').textContent = success ? '정답!' : '오답!';
     document.getElementById('result-sub').textContent = success
-        ? '연속 ' + streak + '문제 정답!'
+        ? '잘했어요!'
         : '선의 위치가 달라요. 다시 도전하세요!';
 }
 function closeResult() { document.getElementById('result-overlay').classList.remove('active'); }
@@ -1010,7 +1011,7 @@ function showComplete() {
     document.getElementById('result-overlay').classList.add('active');
     document.getElementById('result-emoji').textContent = '🏆';
     document.getElementById('result-text').textContent = TOTAL_PROBLEMS + '문제 완료!';
-    document.getElementById('result-sub').textContent = '연속 정답: ' + streak + '문제';
+    document.getElementById('result-sub').textContent = TOTAL_PROBLEMS + '문제 중 ' + correctCount + '문제 정답!';
     // 버튼 변경: "다음 문제" → "처음으로"
     var actions = document.querySelector('.result-actions');
     actions.innerHTML = '<button class="btn-next" onclick="closeResult(); goHome();">처음으로</button>';
