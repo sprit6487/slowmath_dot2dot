@@ -175,12 +175,34 @@
         .game-boards { gap: 36px; }
         .board-wrapper { max-width: 320px; }
     }
-    /* 가로 모드 게임 화면 */
-    @media (orientation: landscape) {
-        #game-view .game-nav { margin-bottom: 6px; }
-        #game-view .board-wrapper { max-width: 35vh; }
-        #game-view .game-hint { font-size: .78rem; margin-bottom: 2px; }
+    /* ── 가로 모드 공통 레이아웃 ── */
+    .landscape-layout {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 8px 16px;
+        height: 100%;
     }
+    .landscape-layout .game-nav {
+        margin-bottom: 4px; width: 100%;
+        flex-shrink: 0;
+    }
+    .landscape-layout .game-boards {
+        flex: 1; display: flex; gap: 20px;
+        align-items: center; justify-content: center;
+        width: 100%;
+    }
+    .landscape-layout .board-wrapper {
+        flex: 0 0 auto;
+        max-width: none;
+        width: auto;
+    }
+    .landscape-layout .board-container {
+        aspect-ratio: 1;
+    }
+    .landscape-layout .board-label { margin-bottom: 4px; }
+    .landscape-layout .game-hint { font-size: .78rem; margin: 4px 0 0; flex-shrink: 0; }
+    .landscape-layout .btn-clear { margin-top: 4px; padding: 6px 20px; font-size: .78rem; }
+
     /* CSS 폴백 가로 모드 (Screen Orientation API 미지원 시) */
     .force-landscape {
         position: fixed !important;
@@ -190,13 +212,16 @@
         transform: rotate(90deg);
         transform-origin: top left;
         margin-left: 100vw;
-        overflow: auto;
+        overflow: hidden;
         z-index: 50;
         background: white;
     }
-    .force-landscape .game-nav { margin-bottom: 6px; }
-    .force-landscape .board-wrapper { max-width: 35vw; }
-    .force-landscape .game-hint { font-size: .78rem; }
+    /* 네이티브 가로 모드 */
+    @media (orientation: landscape) {
+        #game-view.landscape-layout {
+            height: 100dvh;
+        }
+    }
     .game-hint { font-size: .875rem; font-weight: 600; color: #B8AD9E; text-align: center; min-height: 22px; }
 
     /* ── Clear button ── */
@@ -436,22 +461,37 @@ var orientationLocked = false;
 var useCssFallback = false;
 
 function lockLandscape() {
+    var gv = document.getElementById('game-view');
+    gv.classList.add('landscape-layout');
+
     var so = screen.orientation;
     if (so && so.lock) {
         so.lock('landscape').then(function() {
             orientationLocked = true;
+            resizeBoards();
         }).catch(function() {
             // API 미지원 또는 권한 없음 → CSS 폴백
             useCssFallback = true;
             applyCssFallback();
+            setTimeout(resizeBoards, 50);
         });
     } else {
         useCssFallback = true;
         applyCssFallback();
+        setTimeout(resizeBoards, 50);
     }
 }
 
 function unlockLandscape() {
+    var gv = document.getElementById('game-view');
+    gv.classList.remove('landscape-layout');
+    // 보드 크기 초기화
+    var containers = document.querySelectorAll('.board-container');
+    for (var i = 0; i < containers.length; i++) {
+        containers[i].style.width = '';
+        containers[i].style.height = '';
+    }
+
     if (orientationLocked) {
         var so = screen.orientation;
         if (so && so.unlock) so.unlock();
@@ -464,7 +504,6 @@ function unlockLandscape() {
 }
 
 function applyCssFallback() {
-    // 세로 모드일 때만 CSS 회전 적용
     if (window.innerHeight > window.innerWidth) {
         document.getElementById('game-view').classList.add('force-landscape');
     }
@@ -472,6 +511,35 @@ function applyCssFallback() {
 
 function removeCssFallback() {
     document.getElementById('game-view').classList.remove('force-landscape');
+}
+
+function resizeBoards() {
+    if (!puzzle) return;
+    var gv = document.getElementById('game-view');
+    if (!gv.classList.contains('landscape-layout')) return;
+
+    // 가로 모드: 사용 가능한 높이 기준으로 보드 크기 계산
+    requestAnimationFrame(function() {
+        var viewH = gv.classList.contains('force-landscape')
+            ? window.innerWidth   // CSS rotate 시 vw가 실제 높이
+            : window.innerHeight;
+        var navH = document.querySelector('.game-nav').offsetHeight || 40;
+        var hintH = 30;
+        var padding = 40;
+        var boardSize = Math.floor(viewH - navH - hintH - padding);
+        boardSize = Math.max(boardSize, 100);
+
+        var containers = document.querySelectorAll('.board-container');
+        for (var i = 0; i < containers.length; i++) {
+            containers[i].style.width = boardSize + 'px';
+            containers[i].style.height = boardSize + 'px';
+        }
+
+        setupCanvas('cv-question');
+        setupCanvas('cv-answer');
+        drawBoard('cv-question', questionEdges, true);
+        drawAnswerBoard();
+    });
 }
 
 // 화면 회전/리사이즈 시 캔버스 재설정
@@ -483,14 +551,9 @@ window.addEventListener('resize', function() {
             document.getElementById('game-view').classList.remove('force-landscape');
         }
     }
-    // 게임 중이면 캔버스 다시 그리기
+    // 게임 중이면 보드 리사이즈
     if (!document.getElementById('game-view').classList.contains('hidden') && puzzle) {
-        requestAnimationFrame(function() {
-            setupCanvas('cv-question');
-            setupCanvas('cv-answer');
-            drawBoard('cv-question', questionEdges, true);
-            drawAnswerBoard();
-        });
+        resizeBoards();
     }
 });
 
@@ -783,12 +846,19 @@ function startGame() {
     document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
     document.getElementById('btn-clear').style.display = 'none';
 
-    requestAnimationFrame(function() {
-        setupCanvas('cv-question');
-        setupCanvas('cv-answer');
-        drawBoard('cv-question', questionEdges, true);
-        drawAnswerBoard();
-    });
+    // 가로 모드 전환 후 보드 크기 조정, 폴백으로 일반 렌더링도 수행
+    setTimeout(function() {
+        resizeBoards();
+        // landscape-layout이 아닌 경우 일반 렌더링
+        if (!document.getElementById('game-view').classList.contains('landscape-layout')) {
+            requestAnimationFrame(function() {
+                setupCanvas('cv-question');
+                setupCanvas('cv-answer');
+                drawBoard('cv-question', questionEdges, true);
+                drawAnswerBoard();
+            });
+        }
+    }, 100);
 }
 
 function setupCanvas(id) {
