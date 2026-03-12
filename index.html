@@ -573,6 +573,18 @@ function showView(id) {
     document.getElementById('home-view').style.width = '100%';
     document.getElementById('game-view').className = id === 'game-view' ? '' : 'hidden';
     document.getElementById('game-view').style.width = '100%';
+    // 게임 중 스크롤/URL바 방지
+    if (id === 'game-view') {
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.height = '100%';
+        document.body.style.height = '100%';
+    } else {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.body.style.height = '';
+    }
 }
 function socialLogin() { goHome(); }
 function goLogin() { showView('login-view'); }
