@@ -1211,13 +1211,15 @@ function showComplete() {
 function shareApp() {
     var title = document.title;
     var url = window.location.href;
-    var text = title + ' - \uB530\uB77C\uC11C \uC810\uC744 \uC774\uC5B4 \uBCF4\uC138\uC694!';
+    var text = title + ' - 아이와 함께 연습해보세요!';
     if (navigator.share) {
         navigator.share({ title: title, text: text, url: url }).catch(function(){});
-    } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(function() { showToast('\uB9C1\uD06C\uAC00 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!'); });
     } else {
-        prompt('\uB9C1\uD06C\uB97C \uBCF5\uC0AC\uD558\uC138\uC694:', url);
+        navigator.clipboard.writeText(url).then(function() {
+            alert('링크가 복사되었습니다!');
+        }).catch(function() {
+            prompt('링크를 복사하세요:', url);
+        });
     }
 }
 function showToast(msg) {
