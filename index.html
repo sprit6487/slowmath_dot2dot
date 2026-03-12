@@ -574,29 +574,30 @@ function showView(id) {
         document.documentElement.style.cssText = 'overflow:hidden!important;height:100%!important;position:fixed!important;top:0!important;left:0!important;width:100%!important;';
         document.body.style.cssText = 'overflow:hidden!important;height:100%!important;position:fixed!important;top:0!important;left:0!important;width:100%!important;touch-action:none!important;overscroll-behavior:none!important;';
         document.querySelector('.app').style.cssText = 'overflow:hidden!important;height:100%!important;max-height:100dvh!important;touch-action:none!important;overscroll-behavior:none!important;';
-        document.addEventListener('touchstart', preventTouchStartHandler, { passive: false });
-        document.addEventListener('touchmove', preventScrollHandler, { passive: false });
+        document.addEventListener('touchstart', preventTouchHandler, { passive: false });
+        document.addEventListener('touchmove', preventTouchHandler, { passive: false });
     } else {
         document.documentElement.style.cssText = '';
         document.body.style.cssText = '';
         document.querySelector('.app').style.cssText = '';
-        document.removeEventListener('touchstart', preventTouchStartHandler);
-        document.removeEventListener('touchmove', preventScrollHandler);
+        document.removeEventListener('touchstart', preventTouchHandler);
+        document.removeEventListener('touchmove', preventTouchHandler);
     }
 }
-// 게임 중 body 스크롤/URL바 방지
-var preventScrollHandler = function(e) {
-    // touchmove: 캔버스 외 모든 영역 차단 → 스크롤/URL바 방지
-    if (!e.target.closest('canvas')) {
-        e.preventDefault();
-    }
+// 게임 중 body 스크롤/URL바 방지: 모든 터치 이벤트 차단
+var preventTouchHandler = function(e) {
+    e.preventDefault();
 };
-var preventTouchStartHandler = function(e) {
-    // touchstart: 버튼/오버레이는 허용 (click 이벤트 필요), 나머지 차단
-    if (!e.target.closest('canvas') && !e.target.closest('button') && !e.target.closest('.result-overlay')) {
+// 버튼 클릭은 touchend에서 수동 트리거 (touchstart가 차단되므로 click 자동 발생 안 함)
+var gameViewEl = document.getElementById('game-view');
+document.addEventListener('touchend', function(e) {
+    if (gameViewEl.classList.contains('hidden')) return;
+    var btn = e.target.closest('button');
+    if (btn && gameViewEl.contains(btn)) {
         e.preventDefault();
+        btn.click();
     }
-};
+});
 
 function socialLogin() { goHome(); }
 function goLogin() { showView('login-view'); }
