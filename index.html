@@ -340,7 +340,7 @@
         <p class="sec-label">사선(대각선)</p>
         <div class="row-btns" id="diag-select"></div>
 
-        <button class="start-btn" onclick="startGame()">시작하기</button>
+        <button class="start-btn" onclick="currentProblem=0; streak=0; startGame()">시작하기</button>
 
         <div style="text-align:center; margin-top:24px;">
             <button class="logout-btn" onclick="goLogin()">로그아웃</button>
@@ -355,6 +355,7 @@
             </button>
             <span class="nav-title" id="nav-title"></span>
             <span class="badge" id="diff-badge"></span>
+            <span class="badge" id="progress-badge" style="margin-left:6px; background:#4A90D9; color:#fff;"></span>
         </div>
         <div class="game-boards" id="game-boards">
             <div class="board-wrapper">
@@ -398,6 +399,8 @@ var questionEdges = [];
 var answerEdges = [];
 var streak = 0;
 var puzzle = null;
+var currentProblem = 0;
+var TOTAL_PROBLEMS = 10;
 
 // Free-draw state
 var drawingPoints = [];   // current stroke [{x,y}, ...]
@@ -683,6 +686,7 @@ function shuffle(arr) {
 
 // ─── Game ───
 function startGame() {
+    currentProblem++;
     puzzle = generatePuzzle(selectedGrid, selectedDots, allowDiagonal, maxTurns);
     questionEdges = puzzle.edges;
     answerEdges = [];
@@ -691,8 +695,9 @@ function startGame() {
     isDrawing = false;
     showView('game-view');
 
-    document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' \uB290\uB9B0\uC544\uC774 \uC810\uC787\uAE30';
-    document.getElementById('diff-badge').textContent = selectedDots + '\uAC1C \uC810' + (allowDiagonal ? ' \u00b7 \uC0AC\uC120' : '');
+    document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' 느린아이 점잇기';
+    document.getElementById('diff-badge').textContent = selectedDots + '개 점' + (allowDiagonal ? ' · 사선' : '');
+    document.getElementById('progress-badge').textContent = currentProblem + ' / ' + TOTAL_PROBLEMS;
     document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
     document.getElementById('btn-clear').style.display = 'none';
 
@@ -969,12 +974,17 @@ function checkAnswer() {
 }
 
 function showResult(success) {
+    // 버튼 복원 (완료 화면에서 변경되었을 수 있으므로)
+    var actions = document.querySelector('.result-actions');
+    actions.innerHTML = '<button class="btn-retry" onclick="retryGame()">다시 하기</button>' +
+        '<button class="btn-next" onclick="nextGame()">' +
+        (currentProblem >= TOTAL_PROBLEMS ? '결과 보기' : '다음 문제') + '</button>';
     document.getElementById('result-overlay').classList.add('active');
-    document.getElementById('result-emoji').textContent = success ? '\uD83C\uDF89' : '\uD83D\uDE05';
-    document.getElementById('result-text').textContent = success ? '\uC815\uB2F5!' : '\uC624\uB2F5!';
+    document.getElementById('result-emoji').textContent = success ? '🎉' : '😅';
+    document.getElementById('result-text').textContent = success ? '정답!' : '오답!';
     document.getElementById('result-sub').textContent = success
-        ? '\uC5F0\uC18D ' + streak + '\uBB38\uC81C \uC815\uB2F5!'
-        : '\uC120\uC758 \uC704\uCE58\uAC00 \uB2EC\uB77C\uC694. \uB2E4\uC2DC \uB3C4\uC804\uD558\uC138\uC694!';
+        ? '연속 ' + streak + '문제 정답!'
+        : '선의 위치가 달라요. 다시 도전하세요!';
 }
 function closeResult() { document.getElementById('result-overlay').classList.remove('active'); }
 function retryGame() {
@@ -987,7 +997,24 @@ function retryGame() {
     drawAnswerBoard();
     document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
 }
-function nextGame() { closeResult(); startGame(); }
+function nextGame() {
+    closeResult();
+    if (currentProblem >= TOTAL_PROBLEMS) {
+        showComplete();
+    } else {
+        startGame();
+    }
+}
+
+function showComplete() {
+    document.getElementById('result-overlay').classList.add('active');
+    document.getElementById('result-emoji').textContent = '🏆';
+    document.getElementById('result-text').textContent = TOTAL_PROBLEMS + '문제 완료!';
+    document.getElementById('result-sub').textContent = '연속 정답: ' + streak + '문제';
+    // 버튼 변경: "다음 문제" → "처음으로"
+    var actions = document.querySelector('.result-actions');
+    actions.innerHTML = '<button class="btn-next" onclick="closeResult(); goHome();">처음으로</button>';
+}
 
 // ─── Share ───
 function shareApp() {
