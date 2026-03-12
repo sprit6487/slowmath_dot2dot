@@ -584,12 +584,13 @@ function showView(id) {
 }
 // 게임 중 body 스크롤/URL바 방지
 var preventScrollHandler = function(e) {
-    // 캔버스 터치는 허용 (게임 조작), 나머지는 차단
-    if (!e.target.closest('canvas') && !e.target.closest('button') && !e.target.closest('.result-overlay')) {
+    // touchmove: 캔버스 외 모든 영역 차단 → 스크롤/URL바 방지
+    if (!e.target.closest('canvas')) {
         e.preventDefault();
     }
 };
 var preventTouchStartHandler = function(e) {
+    // touchstart: 버튼/오버레이는 허용 (click 이벤트 필요), 나머지 차단
     if (!e.target.closest('canvas') && !e.target.closest('button') && !e.target.closest('.result-overlay')) {
         e.preventDefault();
     }
