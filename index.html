@@ -866,8 +866,12 @@ function startGame() {
     allStrokes = [];
     drawingPoints = [];
     isDrawing = false;
-    showView('game-view');
-    lockLandscape();
+    // 이미 게임 뷰에 있으면 showView/lockLandscape 재호출 방지 (URL바 방지)
+    var gv = document.getElementById('game-view');
+    if (gv.classList.contains('hidden') || gv.style.display === 'none') {
+        showView('game-view');
+        lockLandscape();
+    }
 
     document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' 점잇기';
     document.getElementById('diff-badge').textContent = selectedDots + '개 점' + (allowDiagonal ? ' · 사선' : '');
