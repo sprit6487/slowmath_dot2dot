@@ -175,12 +175,28 @@
         .game-boards { gap: 36px; }
         .board-wrapper { max-width: 320px; }
     }
-    /* 세로가 짧은 화면(가로 모드) 대응 */
-    @media (max-height: 600px) {
-        .board-wrapper { max-width: 35vh; }
-        .game-nav { margin-bottom: 8px; }
-        .game-hint { font-size: .78rem; }
+    /* 가로 모드 게임 화면 */
+    @media (orientation: landscape) {
+        #game-view .game-nav { margin-bottom: 6px; }
+        #game-view .board-wrapper { max-width: 35vh; }
+        #game-view .game-hint { font-size: .78rem; margin-bottom: 2px; }
     }
+    /* CSS 폴백 가로 모드 (Screen Orientation API 미지원 시) */
+    .force-landscape {
+        position: fixed !important;
+        top: 0; left: 0;
+        width: 100vh !important;
+        height: 100vw !important;
+        transform: rotate(90deg);
+        transform-origin: top left;
+        margin-left: 100vw;
+        overflow: auto;
+        z-index: 50;
+        background: white;
+    }
+    .force-landscape .game-nav { margin-bottom: 6px; }
+    .force-landscape .board-wrapper { max-width: 35vw; }
+    .force-landscape .game-hint { font-size: .78rem; }
     .game-hint { font-size: .875rem; font-weight: 600; color: #B8AD9E; text-align: center; min-height: 22px; }
 
     /* ── Clear button ── */
@@ -415,6 +431,69 @@ var GRID_OPTIONS = [
 ];
 var DOT_COUNTS = { 2: [2,3], 3: [3,4,5], 4: [5,6,7] };
 
+// ─── Orientation ───
+var orientationLocked = false;
+var useCssFallback = false;
+
+function lockLandscape() {
+    var so = screen.orientation;
+    if (so && so.lock) {
+        so.lock('landscape').then(function() {
+            orientationLocked = true;
+        }).catch(function() {
+            // API 미지원 또는 권한 없음 → CSS 폴백
+            useCssFallback = true;
+            applyCssFallback();
+        });
+    } else {
+        useCssFallback = true;
+        applyCssFallback();
+    }
+}
+
+function unlockLandscape() {
+    if (orientationLocked) {
+        var so = screen.orientation;
+        if (so && so.unlock) so.unlock();
+        orientationLocked = false;
+    }
+    if (useCssFallback) {
+        removeCssFallback();
+        useCssFallback = false;
+    }
+}
+
+function applyCssFallback() {
+    // 세로 모드일 때만 CSS 회전 적용
+    if (window.innerHeight > window.innerWidth) {
+        document.getElementById('game-view').classList.add('force-landscape');
+    }
+}
+
+function removeCssFallback() {
+    document.getElementById('game-view').classList.remove('force-landscape');
+}
+
+// 화면 회전/리사이즈 시 캔버스 재설정
+window.addEventListener('resize', function() {
+    if (useCssFallback) {
+        if (window.innerHeight > window.innerWidth) {
+            document.getElementById('game-view').classList.add('force-landscape');
+        } else {
+            document.getElementById('game-view').classList.remove('force-landscape');
+        }
+    }
+    // 게임 중이면 캔버스 다시 그리기
+    if (!document.getElementById('game-view').classList.contains('hidden') && puzzle) {
+        requestAnimationFrame(function() {
+            setupCanvas('cv-question');
+            setupCanvas('cv-answer');
+            drawBoard('cv-question', questionEdges, true);
+            drawAnswerBoard();
+        });
+    }
+});
+
 // ─── Navigation ───
 function showView(id) {
     document.getElementById('login-view').style.display = id === 'login-view' ? '' : 'none';
@@ -427,6 +506,7 @@ function showView(id) {
 function socialLogin() { goHome(); }
 function goLogin() { showView('login-view'); }
 function goHome() {
+    unlockLandscape();
     showView('home-view');
     renderGridSelect();
     renderDotsSelect();
@@ -695,6 +775,7 @@ function startGame() {
     drawingPoints = [];
     isDrawing = false;
     showView('game-view');
+    lockLandscape();
 
     document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' 점잇기';
     document.getElementById('diff-badge').textContent = selectedDots + '개 점' + (allowDiagonal ? ' · 사선' : '');
