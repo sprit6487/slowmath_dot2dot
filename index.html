@@ -696,7 +696,7 @@ function startGame() {
     isDrawing = false;
     showView('game-view');
 
-    document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' 느린아이 점잇기';
+    document.getElementById('nav-title').textContent = selectedGrid + '\u00d7' + selectedGrid + ' 점잇기';
     document.getElementById('diff-badge').textContent = selectedDots + '개 점' + (allowDiagonal ? ' · 사선' : '');
     document.getElementById('progress-badge').textContent = currentProblem + ' / ' + TOTAL_PROBLEMS;
     document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
