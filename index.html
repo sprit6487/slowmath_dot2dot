@@ -990,13 +990,29 @@ function drawAnswerBoard() {
 
     function getPos(e) {
         var rect = cvs.getBoundingClientRect();
+        var clientX, clientY;
         if (e.touches && e.touches.length > 0) {
-            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+            clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX; clientY = e.clientY;
         }
-        if (e.changedTouches && e.changedTouches.length > 0) {
-            return { x: e.changedTouches[0].clientX - rect.left, y: e.changedTouches[0].clientY - rect.top };
+        // CSS rotate(90deg) 폴백 시 좌표 보정
+        // rotate(90deg) + transform-origin: top left + margin-left: 100vw
+        // getBoundingClientRect는 회전 후 화면상 위치를 반환하지만
+        // 캔버스 내부 좌표는 회전 전 기준이므로 변환 필요
+        if (document.getElementById('game-view').classList.contains('force-landscape')) {
+            // rect는 회전된 상태: rect.width=원래높이, rect.height=원래너비
+            // 화면상 x축 이동 → 캔버스 y축 (반전), 화면상 y축 이동 → 캔버스 x축
+            var rx = (clientX - rect.left) / rect.width;   // 0~1 (화면 가로 비율)
+            var ry = (clientY - rect.top) / rect.height;   // 0~1 (화면 세로 비율)
+            return {
+                x: ry * cvs.clientWidth,
+                y: (1 - rx) * cvs.clientHeight
+            };
         }
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
     // 그려진 경로를 분석하여 지나간 점 목록을 순서대로 반환
