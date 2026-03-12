@@ -238,10 +238,18 @@
     .result-overlay {
         display: none; position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,.35); z-index: 100;
+        background: rgba(0,0,0,.35); z-index: 200;
         justify-content: center; align-items: center;
     }
     .result-overlay.active { display: flex; }
+    /* 가로 모드 폴백 시 오버레이도 회전 */
+    .result-overlay.force-landscape-overlay {
+        width: 100vh; height: 100vw;
+        top: 0; left: 0; right: auto; bottom: auto;
+        transform: rotate(90deg);
+        transform-origin: top left;
+        margin-left: 100vw;
+    }
     .result-card {
         background: #fff; border-radius: 24px;
         padding: 36px 28px 28px; text-align: center;
@@ -1141,12 +1149,22 @@ function checkAnswer() {
     }
 }
 
+function syncOverlayRotation() {
+    var overlay = document.getElementById('result-overlay');
+    if (document.getElementById('game-view').classList.contains('force-landscape')) {
+        overlay.classList.add('force-landscape-overlay');
+    } else {
+        overlay.classList.remove('force-landscape-overlay');
+    }
+}
+
 function showResult(success) {
     // 버튼 복원 (완료 화면에서 변경되었을 수 있으므로)
     var actions = document.querySelector('.result-actions');
     actions.innerHTML = '<button class="btn-retry" onclick="retryGame()">다시 하기</button>' +
         '<button class="btn-next" onclick="nextGame()">' +
         (currentProblem >= TOTAL_PROBLEMS ? '결과 보기' : '다음 문제') + '</button>';
+    syncOverlayRotation();
     document.getElementById('result-overlay').classList.add('active');
     document.getElementById('result-emoji').textContent = success ? '🎉' : '😅';
     document.getElementById('result-text').textContent = success ? '정답!' : '오답!';
@@ -1154,7 +1172,11 @@ function showResult(success) {
         ? '잘했어요!'
         : '선의 위치가 달라요. 다시 도전하세요!';
 }
-function closeResult() { document.getElementById('result-overlay').classList.remove('active'); }
+function closeResult() {
+    var overlay = document.getElementById('result-overlay');
+    overlay.classList.remove('active');
+    overlay.classList.remove('force-landscape-overlay');
+}
 function retryGame() {
     closeResult();
     answerEdges = [];
@@ -1175,6 +1197,7 @@ function nextGame() {
 }
 
 function showComplete() {
+    syncOverlayRotation();
     document.getElementById('result-overlay').classList.add('active');
     document.getElementById('result-emoji').textContent = '🏆';
     document.getElementById('result-text').textContent = TOTAL_PROBLEMS + '문제 완료!';
