@@ -144,6 +144,22 @@
     }
     .logout-btn:hover { background: #F5F1EB; }
 
+    /* ── TTS Setting ── */
+    .setting-divider { border-top: 1.5px solid #F0ECE6; padding-top: 18px; margin-top: 18px; }
+    .setting-header { display: flex; align-items: center; justify-content: space-between; }
+    .setting-title { font-size: .875rem; font-weight: 600; color: #4A4035; }
+    .toggle-track {
+        width: 48px; height: 28px; border-radius: 99px; position: relative;
+        background: #E0DAD0; border: none; cursor: pointer; flex-shrink: 0; transition: background .2s;
+    }
+    .toggle-track.on { background: #5BC886; }
+    .toggle-knob {
+        width: 22px; height: 22px; border-radius: 50%; background: #fff;
+        position: absolute; top: 3px; left: 3px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.12); transition: transform .2s;
+    }
+    .toggle-track.on .toggle-knob { transform: translateX(20px); }
+
     /* ── Game nav ── */
     .game-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; width: 100%; }
     .btn-back {
@@ -157,7 +173,7 @@
     .badge { font-size: .75rem; font-weight: 600; color: #8C8070; background: #F5F1EB; border-radius: 8px; padding: 4px 10px; }
 
     /* ── Game boards ── */
-    .game-boards { width: 100%; display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+    .game-boards { width: 100%; display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; flex: 1; align-items: center; }
     .board-wrapper { flex: 1; max-width: 46vw; text-align: center; }
     .board-label { font-size: .78rem; font-weight: 700; color: #B8AD9E; margin-bottom: 8px; }
     .board-container {
@@ -436,13 +452,22 @@
 
         <button class="start-btn" onclick="currentProblem=0; streak=0; correctCount=0; startGame()">시작하기</button>
 
+        <div class="setting-divider">
+            <div class="setting-header">
+                <p class="setting-title">음성 안내</p>
+                <button class="toggle-track" id="tts-toggle" onclick="toggleTTS()" role="switch">
+                    <span class="toggle-knob"></span>
+                </button>
+            </div>
+        </div>
+
         <div style="text-align:center; margin-top:24px;">
             <button class="logout-btn" onclick="goLogin()">로그아웃</button>
         </div>
     </div>
 
     <!-- ══════ Game ══════ -->
-    <div id="game-view" class="hidden" style="width:100%; position:relative; overflow:hidden; touch-action:none; overscroll-behavior:none;">
+    <div id="game-view" class="hidden" style="width:100%; position:relative; overflow:hidden; touch-action:none; overscroll-behavior:none; display:flex; flex-direction:column; height:100%;">
         <div class="game-nav">
             <button class="btn-back" onclick="goHome()" title="홈">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-8 9 8M5 11v9a1 1 0 001 1h3m8 0h3a1 1 0 001-1v-9"/></svg>
@@ -483,6 +508,26 @@
 </div>
 
 <script>
+// ─── TTS ───
+var TTS_KEY = 'slowmath_dot2dot_tts';
+var ttsEnabled = (function() { try { return JSON.parse(localStorage.getItem(TTS_KEY)) !== false; } catch(e) { return true; } })();
+function toggleTTS() {
+    ttsEnabled = !ttsEnabled;
+    localStorage.setItem(TTS_KEY, JSON.stringify(ttsEnabled));
+    document.getElementById('tts-toggle').classList.toggle('on', ttsEnabled);
+}
+function speak(text) {
+    if (!ttsEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR'; u.rate = 0.9;
+    setTimeout(function() { window.speechSynthesis.speak(u); }, 50);
+}
+// Init TTS toggle UI
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('tts-toggle').classList.toggle('on', ttsEnabled);
+});
+
 // ─── State ───
 var selectedGrid = 3;
 var selectedDots = 3;
@@ -595,8 +640,9 @@ function resizeBoards() {
             : window.innerHeight;
         var navH = document.querySelector('.game-nav').offsetHeight || 40;
         var hintH = 30;
-        var padding = 40;
-        var boardSize = Math.floor(viewH - navH - hintH - padding);
+        var clearH = 40;
+        var padding = 60;
+        var boardSize = Math.floor(viewH - navH - hintH - clearH - padding);
         boardSize = Math.max(boardSize, 100);
 
         var containers = document.querySelectorAll('.board-container');
@@ -633,8 +679,14 @@ function showView(id) {
     document.getElementById('home-view').className = id === 'home-view' ? '' : 'hidden';
     document.getElementById('home-view').style.position = 'relative';
     document.getElementById('home-view').style.width = '100%';
-    document.getElementById('game-view').className = id === 'game-view' ? '' : 'hidden';
-    document.getElementById('game-view').style.width = '100%';
+    var gvEl = document.getElementById('game-view');
+    gvEl.className = id === 'game-view' ? '' : 'hidden';
+    gvEl.style.width = '100%';
+    if (id === 'game-view') {
+        gvEl.style.display = 'flex';
+        gvEl.style.flexDirection = 'column';
+        gvEl.style.height = '100%';
+    }
     // 게임 중 스크롤/URL바 방지
     if (id === 'game-view') {
         window.scrollTo(0, 0);
@@ -949,6 +1001,7 @@ function startGame() {
     document.getElementById('progress-badge').textContent = currentProblem + ' / ' + TOTAL_PROBLEMS;
     document.getElementById('game-hint').textContent = '\uC810\uACFC \uC810 \uC0AC\uC774\uC5D0 \uC120\uC744 \uADF8\uC73C\uC138\uC694';
     document.getElementById('btn-clear').style.display = 'none';
+    speak('점과 점 사이에 선을 그으세요');
 
     // 가로 모드 전환 후 보드 크기 조정, 폴백으로 일반 렌더링도 수행
     setTimeout(function() {
@@ -1257,6 +1310,7 @@ function showResult(success) {
     document.getElementById('result-sub').textContent = success
         ? '잘했어요!'
         : '선의 위치가 달라요. 다시 도전하세요!';
+    speak(success ? '정답이에요! 잘했어요!' : '다시 한번 살펴봐요');
 }
 function closeResult() {
     document.getElementById('result-overlay').classList.remove('active');
@@ -1288,6 +1342,7 @@ function showComplete() {
     // 버튼 변경: "다음 문제" → "처음으로"
     var actions = document.querySelector('.result-actions');
     actions.innerHTML = '<button class="btn-next" onclick="closeResult(); goHome();">처음으로</button>';
+    speak('모두 풀었어요! 잘했어요!');
 }
 
 // ─── Share ───
