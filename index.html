@@ -516,21 +516,36 @@ function lockLandscape() {
     var gv = document.getElementById('game-view');
     gv.classList.add('landscape-layout');
 
-    var so = screen.orientation;
-    if (so && so.lock) {
-        so.lock('landscape').then(function() {
-            orientationLocked = true;
-            resizeBoards();
-        }).catch(function() {
-            // API 미지원 또는 권한 없음 → CSS 폴백
+    function tryOrientationLock() {
+        var so = screen.orientation;
+        if (so && so.lock) {
+            so.lock('landscape').then(function() {
+                orientationLocked = true;
+                resizeBoards();
+            }).catch(function() {
+                useCssFallback = true;
+                applyCssFallback();
+                setTimeout(resizeBoards, 50);
+            });
+        } else {
             useCssFallback = true;
             applyCssFallback();
             setTimeout(resizeBoards, 50);
+        }
+    }
+
+    // 1) 전체 화면 모드 진입 후 가로 모드 잠금 (Chrome Android 등)
+    var el = document.documentElement;
+    var requestFs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (requestFs) {
+        requestFs.call(el).then(function() {
+            tryOrientationLock();
+        }).catch(function() {
+            // 전체 화면 실패 시 가로 모드만 시도
+            tryOrientationLock();
         });
     } else {
-        useCssFallback = true;
-        applyCssFallback();
-        setTimeout(resizeBoards, 50);
+        tryOrientationLock();
     }
 }
 
@@ -553,6 +568,9 @@ function unlockLandscape() {
         removeCssFallback();
         useCssFallback = false;
     }
+    // 전체 화면 해제
+    var exitFs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (exitFs && document.fullscreenElement) exitFs.call(document);
 }
 
 function applyCssFallback() {
