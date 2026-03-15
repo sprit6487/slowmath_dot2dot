@@ -24,6 +24,34 @@
         padding-bottom: max(24px, env(safe-area-inset-bottom));
         display: flex; flex-direction: column;
     }
+    /* 소형 폰 (≤ 380px) */
+    @media (max-width: 380px) {
+        .app { padding: 16px 12px; }
+        .app-header h1 { font-size: 1.25rem; }
+        .login-logo-area h1 { font-size: 1.25rem; }
+        .login-subtitle { font-size: .82rem; }
+        .login-buttons { max-width: 280px; }
+        .login-btn { padding: 12px 16px; font-size: .85rem; }
+        .grid-select { gap: 8px; }
+        .grid-card { padding: 10px 4px 8px; border-radius: 16px; }
+        .grid-card canvas { width: 40px; height: 40px; }
+        .grid-card .g-name { font-size: .75rem; }
+        .sec-label { font-size: .78rem; }
+        .seg-btn { padding: 9px 0; font-size: .8rem; }
+        .start-btn { padding: 14px 0; font-size: 1rem; }
+        .game-boards { gap: 6px; }
+        .board-wrapper { max-width: 44vw; }
+        .board-label { font-size: .7rem; margin-bottom: 4px; }
+        .game-hint { font-size: .78rem; }
+        .btn-clear { padding: 8px 20px; font-size: .78rem; }
+        .setting-title { font-size: .8rem; }
+    }
+    /* 중형 폰 (≤ 420px) */
+    @media (max-width: 420px) {
+        .app { padding: 20px 16px; }
+        .game-boards { gap: 8px; }
+        .board-wrapper { max-width: 45vw; }
+    }
     /* 태블릿 */
     @media (min-width: 768px) {
         body { align-items: center; padding: 32px; }
@@ -313,10 +341,10 @@
     }
     .splash-overlay.fade-out { opacity: 0; pointer-events: none; }
     .splash-logo { animation: splashFloat 2.4s ease-in-out infinite; margin-bottom: 24px; }
-    .splash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.025em; margin-bottom: 8px; }
+    .splash-title { font-size: 1.5rem; font-weight: 900; letter-spacing: -0.025em; margin-bottom: 8px; word-break: keep-all; }
     .splash-subtitle { color: #B8AD9E; font-size: 0.9375rem; font-weight: 500; margin-bottom: 48px; }
     @keyframes splashFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-    @media (min-width:768px) { .splash-title{font-size:2.5rem} .splash-subtitle{font-size:1.0625rem} }
+    @media (min-width:768px) { .splash-title{font-size:2rem} .splash-subtitle{font-size:1.0625rem} }
 </style>
 </head>
 <body>
