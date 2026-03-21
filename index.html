@@ -229,13 +229,13 @@
 
     /* ── Game nav ── */
     .game-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; width: 100%; }
-    .btn-back {
+    .btn-home {
         width: 36px; height: 36px; border-radius: 10px;
         border: 2px solid #E8E2DA; background: white;
         display: flex; align-items: center; justify-content: center;
         cursor: pointer; font-size: 1.1rem; color: #8C8070; flex-shrink: 0;
     }
-    .btn-back:active { background: #F5F1EB; }
+    .btn-home:active { background: #F5F1EB; }
     .nav-title { flex: 1; font-size: 1rem; font-weight: 700; color: #4A4035; }
     .badge { font-size: .75rem; font-weight: 600; color: #8C8070; background: #F5F1EB; border-radius: 8px; padding: 4px 10px; }
 
@@ -537,7 +537,7 @@
     <!-- ══════ Game ══════ -->
     <div id="game-view" class="hidden" style="width:100%; position:relative; overflow:hidden; touch-action:none; overscroll-behavior:none; display:flex; flex-direction:column; height:100%;">
         <div class="game-nav">
-            <button class="btn-back" onclick="goHome()" title="홈">
+            <button class="btn-home" onclick="goHome()" title="홈">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-8 9 8M5 11v9a1 1 0 001 1h3m8 0h3a1 1 0 001-1v-9"/></svg>
             </button>
             <span class="nav-title" id="nav-title"></span>
