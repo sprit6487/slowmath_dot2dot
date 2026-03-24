@@ -1405,12 +1405,13 @@ function nextGame() {
 
 function showComplete() {
     document.getElementById('result-overlay').classList.add('active');
-    document.getElementById('result-emoji').textContent = '🏆';
+    document.getElementById('result-emoji').textContent = correctCount === TOTAL_PROBLEMS ? '🏆' : '👏';
     document.getElementById('result-text').textContent = TOTAL_PROBLEMS + '문제 완료!';
-    document.getElementById('result-sub').textContent = TOTAL_PROBLEMS + '문제 중 ' + correctCount + '문제 정답!';
-    // 버튼 변경: "다음 문제" → "처음으로"
+    document.getElementById('result-sub').textContent = TOTAL_PROBLEMS + '문제 중 ' + correctCount + '개 정답';
+    // 버튼 변경: 다시 하기 + 홈으로
     var actions = document.querySelector('.result-actions');
-    actions.innerHTML = '<button class="btn-next" onclick="closeResult(); goHome();">처음으로</button>';
+    actions.innerHTML = '<button class="btn-retry" onclick="currentProblem=0; streak=0; correctCount=0; closeResult(); startGame();">다시 하기</button>' +
+        '<button class="btn-next" onclick="closeResult(); goHome();">홈으로</button>';
     speak('모두 풀었어요! 잘했어요!');
 }
 
