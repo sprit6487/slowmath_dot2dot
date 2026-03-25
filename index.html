@@ -786,7 +786,7 @@ document.addEventListener('touchend', function(e) {
     }
 });
 
-function socialLogin() { goHome(); }
+function socialLogin(provider) { localStorage.setItem('slowmath_dot2dot_login', provider); const _sp=sessionStorage.getItem('_sp');if(_sp){sessionStorage.removeItem('_sp');startGame(...JSON.parse(_sp));return;} goHome(); }
 function goLogin() { showView('login-view'); }
 function goHome() {
     unlockLandscape();
@@ -1050,7 +1050,7 @@ function shuffle(arr) {
 
 // ─── Game ───
 function startGame() {
-    if (!localStorage.getItem('slowmath_dot2dot_login')) { showView('login-view'); return; }
+    if (!localStorage.getItem('slowmath_dot2dot_login')) { sessionStorage.setItem('_sp',JSON.stringify([])); showView('login-view'); return; }
     currentProblem++;
     puzzle = generatePuzzle(selectedGrid, selectedDots, allowDiagonal, maxTurns);
     questionEdges = puzzle.edges;
