@@ -787,7 +787,7 @@ document.addEventListener('touchend', function(e) {
 });
 
 function socialLogin(provider) { localStorage.setItem('slowmath_dot2dot_login', provider); const _sp=sessionStorage.getItem('_sp');if(_sp){sessionStorage.removeItem('_sp');startGame(...JSON.parse(_sp));return;} goHome(); }
-function goLogin() { showView('login-view'); }
+function goLogin() { localStorage.removeItem('slowmath_dot2dot_login'); showView('login-view'); }
 function goHome() {
     unlockLandscape();
     showView('home-view');
