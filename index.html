@@ -530,7 +530,7 @@
         </div>
 
         <div style="text-align:center; margin-top:24px;">
-            <button class="logout-btn" onclick="goLogin()">로그아웃</button>
+            <button class="logout-btn" style="display:none" onclick="goLogin()">로그아웃</button>
         </div>
     </div>
 
@@ -770,6 +770,7 @@ function showView(id) {
         document.removeEventListener('touchstart', preventTouchHandler);
         document.removeEventListener('touchmove', preventTouchHandler);
     }
+    const lb=document.querySelector('.logout-btn');if(lb)lb.style.display=id==='home-view'&&localStorage.getItem('slowmath_dot2dot_login')?'':'none';
 }
 // 게임 중 body 스크롤/URL바 방지: 모든 터치 이벤트 차단
 var preventTouchHandler = function(e) {
@@ -791,6 +792,7 @@ function goLogin() { localStorage.removeItem('slowmath_dot2dot_login'); showView
 function goHome() {
     unlockLandscape();
     showView('home-view');
+    const lb=document.querySelector('.logout-btn');if(lb)lb.style.display=localStorage.getItem('slowmath_dot2dot_login')?'':'none';
     renderGridSelect();
     renderDotsSelect();
     renderTurnSelect();
