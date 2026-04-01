@@ -218,6 +218,45 @@
         .login-btn { padding: 16px 24px; font-size: 1rem; border-radius: 14px; }
     }
 
+    /* ── Share Bubble ── */
+    .share-bubble {
+        position: absolute;
+        right: 0;
+        background: #FFF8F0;
+        border: 1.5px solid #EDD080;
+        border-radius: 12px;
+        padding: 8px 12px;
+        font-size: 0.72rem;
+        color: #7B6545;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(220,160,50,.18);
+        z-index: 20;
+        animation: floatBubble 2.8s ease-in-out infinite;
+        line-height: 1.5;
+        text-align: right;
+        max-width: 200px;
+        white-space: nowrap;
+    }
+    .share-bubble::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        right: 10px;
+        border: 4px solid transparent;
+        border-bottom: 7px solid #EDD080;
+        border-top: 0;
+    }
+    .share-bubble::after {
+        content: '';
+        position: absolute;
+        top: -6px;
+        right: 11px;
+        border: 3px solid transparent;
+        border-bottom: 6px solid #FFF8F0;
+        border-top: 0;
+        z-index: 1;
+    }
+
     /* ── Header ── */
     .app-header {
         display: flex; flex-direction: column; align-items: center;
@@ -557,14 +596,16 @@ setTimeout(function() {
                 Facebook으로 시작하기
             </button>
         </div>
-        <div style="margin-top: 32px; text-align: center;">
-            <p id="share-bubble" style="color: #B8AD9E; font-size: 0.85rem; margin: 0; line-height: 1.5;">지금 지인에게 공유하시면<br>하루 무료 이용권을 드려요</p>
-            <button style="margin-top: 12px; padding: 8px 20px; border: 1.5px solid #4A4035; background: none; border-radius: 8px; color: #4A4035; font-weight: 600; cursor: pointer; font-family: inherit;" onclick="shareApp()">공유하기</button>
-        </div>
     </div>
 
     <!-- ══════ Home ══════ -->
     <div id="home-view" class="hidden" style="position:relative; width:100%;">
+        <button onclick="shareApp()" style="position:absolute; top:0; right:0; background:white; border:2px solid #E8E2DA; border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#8C8070; z-index:10;" title="공유하기">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13"/>
+            </svg>
+        </button>
+        <div id="share-bubble" class="share-bubble" style="top:44px;">지금 지인에게 공유하시면<br>하루 무료 이용권을 드려요</div>
         <div class="app-header">
             <svg viewBox="0 0 120 100" width="90" height="75" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <ellipse cx="30" cy="72" rx="10" ry="6" fill="#F2DC8C" stroke="#3A9B6A" stroke-width="2" transform="rotate(-20 30 72)"/>
@@ -617,10 +658,6 @@ setTimeout(function() {
         </div>
 
         <div style="text-align:center; margin-top:24px;">
-        <div style="margin-top: 24px; text-align: center;">
-            <p style="color: #B8AD9E; font-size: 0.85rem; margin: 0 0 12px; line-height: 1.5;">지금 지인에게 공유하시면<br>하루 무료 이용권을 드려요</p>
-            <button style="padding: 8px 20px; border: 1.5px solid #4A4035; background: none; border-radius: 8px; color: #4A4035; font-weight: 600; cursor: pointer; font-family: inherit;" onclick="shareApp()">공유하기</button>
-        </div>
             <button class="logout-btn" style="display:none" onclick="goLogin()">로그아웃</button>
         </div>
     </div>
