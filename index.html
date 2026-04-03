@@ -501,6 +501,10 @@
     @keyframes splashFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
     @media (max-width:380px) { .splash-title{font-size:1.5rem} }
     @media (min-width:768px) { .splash-logo svg{width:160px;height:134px} .splash-title{font-size:2.5rem} .splash-subtitle{font-size:1.0625rem} }
+
+/* Hide share button/bubble when not logged in */
+body:not(.sm-loggedin) [title="공유하기"],
+body:not(.sm-loggedin) #share-bubble { display: none !important; }
 </style>
 </head>
 <body>
@@ -1598,6 +1602,21 @@ setTimeout(function() {
     splash.classList.add('fade-out');
     setTimeout(function() { splash.remove(); }, 500);
 }, 3000);
+
+// Share visibility: hide when logged out
+(function() {
+  var _SM_KEY = 'slowmath_dot2dot_login';
+  function _updateShareVis() {
+    document.body.classList.toggle('sm-loggedin', !!localStorage.getItem(_SM_KEY));
+  }
+  _updateShareVis();
+  ['socialLogin','socialLogout','goLogin'].forEach(function(fn) {
+    if (typeof window[fn] === 'function') {
+      var _orig = window[fn];
+      window[fn] = function() { _orig.apply(this, arguments); _updateShareVis(); };
+    }
+  });
+})();
 </script>
 </body>
 </html>
